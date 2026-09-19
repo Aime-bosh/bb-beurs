@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Beurs">
+<meta name="theme-color" content="#000000">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Beurs</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+/* Bosh & Bordon huisstijl, gemeten op boshandbordon.be en het logopakket (2026-09-18):
+   zwart en wit als basis, zalm #fa8072 als accent, League Spartan, pilvormige knoppen. */
+@font-face{font-family:'League Spartan';src:url('league-spartan.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+:root{--zwart:#000;--inkt:#14171c;--wit:#fff;--licht:#ededed;--zacht:#f6f6f6;--zalm:#fa8072;--zalm-d:#f37262;--groen:#77b978;--oranje:#fcaf3b;--grijs:#6c6f75;--lijn:#d9d9d9;--r:18px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;overflow-x:hidden;max-width:100%;background:var(--wit);color:var(--inkt);font:400 17px/1.45 'League Spartan',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+body{padding-top:env(safe-area-inset-top);background:var(--zwart)}
+#app,#kies{background:var(--wit)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-columns:minmax(0,1fr);min-height:100dvh}
+.paneel{display:none;flex-direction:column;min-height:100dvh;min-width:0;background:var(--wit)}
+.paneel.actief{display:flex}
+@media (min-width:768px){
+  .app{grid-template-columns:400px minmax(0,1fr)}
+  .paneel{display:flex!important;min-height:100dvh}
+  #lijst{border-right:1px solid var(--lijn)}
+  #stand .kop .terug{display:none}
+  #stand .kop .merk{display:none}
+}
+.kop{background:var(--zwart);color:var(--wit);padding:14px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5;min-height:72px}
+.kop .merk{width:40px;height:40px;flex:none;display:block}
+.kop h1{font-size:19px;margin:0;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:3px}
+.kop h1 .wie{display:block;font-size:13px;font-weight:400;color:#b9bbbf;text-transform:uppercase;letter-spacing:.08em;line-height:1.1}
+.kop #btnMeer{width:44px;padding:8px 0 5px;flex:none}
+.kop .klein{color:#b9bbbf;font-size:15px;padding-top:3px}
+.kop button{background:transparent;border:1.5px solid var(--wit);color:var(--wit);border-radius:999px;padding:10px 18px 7px;min-height:42px;font-weight:600;font-size:16px}
+.kop button.accent{background:var(--zalm);border-color:var(--zalm);position:relative}
+.kop button.accent .bol{position:absolute;top:-7px;right:-7px;min-width:24px;height:24px;border-radius:12px;background:#fff;color:var(--inkt);font-size:13px;font-weight:700;display:none;align-items:center;justify-content:center;padding:3px 6px 0;border:2px solid var(--zwart)}
+.kop button.accent.open .bol{display:flex}
+.kop button.accent.dringend{animation:klop 1.4s infinite}
+@keyframes klop{50%{transform:scale(1.07)}}
+.veilig{background:var(--zacht);border-left:3px solid var(--zalm);padding:12px 14px 9px;margin:0 0 14px;font-size:15px;display:none}
+.veilig.toon{display:block}
+.veilig b{display:block}
+.kop button.terug{border:0;padding:6px 4px 2px;font-size:30px;line-height:1;font-weight:400}
+.inhoud{padding:18px 18px 130px;flex:1}
+.banner{background:var(--zalm);color:var(--wit);padding:14px 18px;font-size:16px}
+.banner b{display:block;font-weight:700}
+.zoek{width:100%;padding:15px 20px 11px;border:1.5px solid var(--inkt);border-radius:999px;background:var(--wit);margin-bottom:12px;outline:none}
+.zoek:focus{border-color:var(--zalm)}
+.schakel{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.pil{border:1.5px solid var(--inkt);background:var(--wit);border-radius:999px;padding:11px 18px 8px;min-height:44px;color:var(--inkt);font-weight:500}
+.pil.aan{background:var(--inkt);color:var(--wit)}
+.rij{display:flex;align-items:center;gap:14px;background:var(--wit);border:0;border-bottom:1px solid var(--lijn);border-radius:0;padding:16px 4px 13px;margin:0;width:100%;text-align:left;color:var(--inkt)}
+.rij:active,.rij.huidig{background:var(--zacht)}
+.rij .tegel{width:58px;height:58px;flex:none;border-radius:12px;border:1px solid var(--lijn);background:var(--wit);display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:15px;padding-top:3px}
+.rij .tegel.metlogo{padding:3px}
+.rij .tegel img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.rij .nr{font-weight:700;color:var(--inkt)}
+.rij.bezocht .nr{color:var(--grijs)}
+.rij .naam{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400}
+.rij.a .naam{font-weight:700}
+.rij .beurs{font-size:13px;color:var(--grijs);font-weight:400;text-transform:uppercase;letter-spacing:.05em}
+.rij .vink{width:28px;height:28px;flex:none;border-radius:50%;border:1.5px solid var(--inkt);display:grid;place-items:center;font-size:15px;padding-top:2px}
+.rij.bezocht .vink{background:var(--groen);border-color:var(--groen);color:var(--wit)}
+.rij.bezocht .naam{color:var(--grijs)}
+.rij.bezocht .tegel{opacity:.55}
+.leeg{color:var(--grijs);text-align:center;padding:48px 10px}
+.blok{background:var(--wit);border:0;border-top:1px solid var(--lijn);border-radius:0;padding:22px 0 8px;margin:0}
+.blok h2{font-size:14px;text-transform:uppercase;letter-spacing:.12em;color:var(--inkt);margin:0 0 14px;font-weight:700}
+.standkop{background:var(--zwart);color:var(--wit);border-radius:var(--r);padding:22px 20px 20px;margin-bottom:8px}
+.standkop .top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.standkop .logo{width:84px;height:84px;flex:none;border-radius:14px;background:var(--wit);display:grid;place-items:center;padding:8px;overflow:hidden}
+.standkop .logo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.standkop .nr{display:inline-block;background:var(--zalm);color:var(--wit);font-weight:700;border-radius:999px;padding:6px 14px 3px;margin-bottom:12px;font-size:15px}
+.standkop h2{margin:0 0 6px;font-size:26px;line-height:1.12;font-weight:700}
+.standkop .meta{color:#b9bbbf;font-size:14px;text-transform:uppercase;letter-spacing:.05em}
+.standkop .doen{margin-top:12px;font-size:16px;color:#e9e9e9}
+.knoppen{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.knop{white-space:nowrap;min-width:0;min-height:56px;border-radius:999px;border:1.5px solid var(--inkt);background:var(--wit);color:var(--inkt);padding:13px 14px 9px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.15}
+.knop.primair{background:var(--inkt);color:var(--wit);border-color:var(--inkt)}
+.knop.geel{background:var(--zalm);color:var(--wit);border-color:var(--zalm)}
+.knop.opneemt{background:var(--zalm-d);color:var(--wit);border-color:var(--zalm-d)}
+.knop:disabled{opacity:.35}
+.keuze3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.keuze3 .pil{text-align:center;min-height:52px;padding:10px 6px 7px;min-width:0;display:flex;align-items:center;justify-content:center;line-height:1.1}
+.keuze3 .pil.aan.warm{background:var(--zalm);border-color:var(--zalm)}
+.keuze3 .pil.aan.koud{background:var(--grijs);border-color:var(--grijs)}
+.veld{width:100%;min-width:0;padding:15px 20px 11px;border:1.5px solid var(--lijn);border-radius:26px;background:var(--wit);margin-bottom:10px;outline:none}
+.veld:focus{border-color:var(--inkt)}
+textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-top:14px}
+.hint{font-size:14px;color:var(--grijs);margin:10px 2px 0}
+.waarsch{font-size:15px;background:var(--zacht);border-left:3px solid var(--zalm);border-radius:0;padding:12px 14px 9px;margin-top:12px}
+.media{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.media .item{border:1.5px solid var(--lijn);border-radius:999px;padding:6px 8px 4px 16px;font-size:15px;display:flex;gap:8px;align-items:center;background:var(--wit)}
+.media .item img{height:52px;border-radius:8px;margin:2px 0 4px -8px}
+.media .item button{border:0;background:transparent;color:var(--zalm-d);font-size:18px;padding:0 8px}
+.punt{width:11px;height:11px;border-radius:50%;background:currentColor;display:inline-block;margin-top:-3px}
+.opneemt .punt{animation:knip 1s infinite}
+@keyframes knip{50%{opacity:.2}}
+.voet{position:fixed;left:0;right:0;bottom:0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(rgba(255,255,255,0),var(--wit) 35%);z-index:6}
+@media (min-width:768px){.voet{left:400px}}
+.voet .knop{width:100%;min-height:60px;font-size:18px}
+#scanner{position:fixed;inset:0;background:#000;z-index:20;display:none;flex-direction:column}
+#scanner.actief{display:flex}
+#scanner video{flex:1;width:100%;object-fit:cover}
+#scanner .bar{padding:16px 18px calc(16px + env(safe-area-inset-bottom));display:flex;gap:12px;align-items:center;color:#fff;background:#000}
+#scanner .bar button{flex:1;min-height:54px;border-radius:999px;border:1.5px solid #fff;background:transparent;color:#fff;font-weight:600;padding-top:4px}
+#plan{position:fixed;inset:0;z-index:15;background:var(--wit);display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#plan.actief{display:flex}
+#plan .kop button{min-width:44px;padding-left:14px;padding-right:14px}
+#plan .kop .merk{display:none}
+.legende{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px 7px;font-size:13px;color:var(--grijs);border-bottom:1px solid var(--lijn)}
+.legende span{display:flex;align-items:center;gap:6px}
+.legende .l{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--inkt);display:inline-block;margin-top:-3px}
+.l.mijn{background:var(--wit)}.l.klaar{background:var(--groen);border-color:var(--groen)}.l.c1{background:#e2e8ee;border-color:#93a1ae}.l.c2{background:#efe6d9;border-color:#b3a48d}.l.c0{background:#e8e8e8;border-color:#9a9a9a}.l.geen{background:#efeeea;border-color:#dddcd6}.l.bezig{background:#fdd9d3;border-color:#f37262;border-style:dashed}.l.pa{background:var(--zalm);border-color:var(--zalm);border-radius:50%;width:11px;height:11px}
+#planvlak{flex:1;min-height:0;overflow:hidden;touch-action:none;background:#ecebe7;position:relative}
+#plancanvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#plansvg .gebouw{fill:#e3e2dd;stroke:#d3d2cc;stroke-width:1.5}
+#plansvg .vloer{fill:#fbfbf9;stroke:#cfcec8;stroke-width:3}
+#plansvg .gang{fill:#fde4df;stroke:none}
+#plansvg .zone{fill:url(#arcering);stroke:#f3b3a9;stroke-width:1.5;stroke-dasharray:6 5}
+#plansvg .leeg{fill:#efeeea;stroke:#dddcd6;stroke-width:1.5}
+#plansvg .s{stroke-width:2.5;cursor:pointer;stroke-linejoin:round}
+#plansvg .s.mijn{fill:#fff;stroke:#14171c}
+#plansvg .s.c1{fill:#e2e8ee;stroke:#93a1ae}
+#plansvg .s.c2{fill:#efe6d9;stroke:#b3a48d}
+#plansvg .s.c0{fill:#e8e8e8;stroke:#9a9a9a}
+#plansvg .s.deels{fill:#fde3df;stroke:#f37262}
+#plansvg .s.bezig{fill:#fdd9d3;stroke:#f37262;stroke-dasharray:7 4}
+#plansvg .s.klaar{fill:#77b978;stroke:#4f9a52}
+#plansvg .s.nu{fill:#fa8072;stroke:#14171c;stroke-width:4.5}
+#plansvg .s.gekozen{stroke:#fa8072;stroke-width:6}
+#plansvg .schaduw{filter:url(#zacht)}
+#plansvg text{font-family:'League Spartan',sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+#plansvg image{pointer-events:none}
+#plansvg .nr{font-size:13px;font-weight:700;fill:#14171c}
+#plansvg .nr.ander{fill:#6f7880;font-weight:500}
+#plansvg .nr.klaar{fill:#fff}
+#plansvg .a{fill:#fa8072}
+#plansvg .lab{font-size:19px;font-weight:600;fill:#b9a9a4;letter-spacing:.1em}
+#plansvg .lab.gangnaam{fill:#e59c90;font-size:17px}
+#plansvg .halnaam{font-size:54px;font-weight:800;fill:#14171c;opacity:.07;letter-spacing:.04em}
+#plansvg .ingang rect{fill:#14171c}
+#plansvg .ingang text{fill:#fff;font-size:17px;font-weight:600;letter-spacing:.04em}
+#plansvg .ingang path{fill:#14171c}
+.planteller{position:absolute;left:12px;top:12px;background:var(--inkt);color:#fff;border-radius:999px;padding:8px 14px 5px;font-size:14px;font-weight:600;z-index:2;pointer-events:none}
+.planknoppen{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:8px;z-index:2}
+.planknoppen button{width:46px;height:46px;border-radius:50%;border:1.5px solid var(--inkt);background:#fff;font-size:24px;font-weight:500;line-height:1;padding-top:4px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+#planblad{display:none;background:var(--wit);padding:0 14px calc(14px + env(safe-area-inset-bottom));max-height:62vh;overflow:auto;box-shadow:0 -8px 24px rgba(0,0,0,.14);border-radius:22px 22px 0 0;margin-top:-22px;position:relative;z-index:3}
+#planblad.actief{display:block}
+#planblad .greep{width:44px;height:5px;border-radius:3px;background:var(--lijn);margin:10px auto 12px}
+#planblad h3{margin:4px 4px 10px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--grijs)}
+#planblad .standkop{margin-bottom:10px}
+#planblad .standkop .status{display:inline-block;margin-top:12px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#b9bbbf}
+#planblad .standkop .status.ok{color:var(--groen)}
+#planblad .acties{display:flex;gap:10px;margin-top:16px}
+#planblad .acties .knop{flex:1;min-height:52px}
+#planblad .acties .knop.open{background:var(--zalm);border-color:var(--zalm);color:#fff}
+#planblad .acties .knop.dicht{background:transparent;border-color:#fff;color:#fff;flex:0 0 auto;padding-left:22px;padding-right:22px}
+#planblad .rij .tegel{width:50px;height:50px}
+.pil.plan{border-color:var(--zalm-d);color:var(--zalm-d);font-weight:600}
+.standkop .naarplan{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;padding:7px 14px 4px;font-size:14px;font-weight:600;margin-top:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:var(--inkt);color:#fff;padding:12px 20px 9px;border-radius:999px;font-size:15px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.zichtbaar{opacity:1}
+.kies{position:fixed;inset:0;z-index:40;background:var(--wit);overflow:auto;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}
+.kies .binnen{width:100%;max-width:440px}
+.kies .logo{display:block;width:200px;margin:0 auto 28px}
+.kies h1{font-size:30px;font-weight:700;margin:0 0 6px;line-height:1.1}
+.kies p{color:var(--grijs);margin:0 0 22px}
+.kies .knop{width:100%;margin-bottom:12px;min-height:64px;font-size:19px}
+.badge{font-size:12px;border-radius:999px;padding:3px 8px 1px;border:1px solid currentColor;font-weight:700;letter-spacing:.04em;text-transform:none}
+.rij.a .badge{color:var(--zalm-d)}
+.standkop .badge{color:var(--wit);margin-left:6px}
+</style>
+</head>
+<body>
+
+<div id="banner" class="banner" style="display:none">
+  <b>Zet me eerst op je beginscherm</b>
+  <span id="bannertekst">iPhone: deelknop, dan "Zet op beginscherm". Android: menu, dan "Toevoegen aan startscherm". Open de app daarna altijd via het icoon, anders zie je twee halve lijsten.</span>
+</div>
+
+<div id="kies" class="kies" style="display:none"><div class="binnen">
+  <img class="logo" src="logo-zwart.svg" alt="Bosh & Bordon, Bureau of Brands">
+  <h1>Wie ben je?</h1>
+  <p>Eén keer kiezen. Je ziet daarna je eigen route.</p>
+  <button class="knop primair" data-wie="Lorenzo">Lorenzo</button>
+  <button class="knop primair" data-wie="Stijn">Stijn</button>
+  <button class="knop primair" data-wie="Peter">Peter</button>
+</div></div>
+
+<div id="app" class="app" style="display:none">
+
+  <section id="lijst" class="paneel actief">
+    <div class="kop">
+      <img class="merk" src="symbool-wit.svg" alt="Bosh & Bordon">
+      <h1 id="lijsttitel">Mijn route</h1>
+      <button id="btnExport" class="accent" title="Verstuur naar Lorenzo">Verstuur<span class="bol" id="bol"></span></button>
+      <button id="btnMeer" title="Meer">⋯</button>
+    </div>
+    <div class="inhoud">
+      <div class="veilig" id="veilig"></div>
+      <input id="zoek" class="zoek" type="search" placeholder="Zoek bedrijf of standnummer" autocomplete="off">
+      <div class="schakel">
+        <button class="pil aan" id="filterMijn">Mijn standen</button>
+        <button class="pil" id="filterAlle">Alle standen</button>
+        <button class="pil" id="filterOpen">Nog te doen</button>
+        <button class="pil plan" id="btnPlan">Grondplan</button>
+      </div>
+      <div id="rijen"></div>
+    </div>
+  </section>
+
+  <section id="stand" class="paneel">
+    <div class="kop">
+      <button class="terug" id="btnTerug" aria-label="Terug">‹</button>
+      <img class="merk" src="symbool-wit.svg" alt="">
+      <h1 id="standtitel">Stand</h1>
+      <span class="klein" id="standteller"></span>
+    </div>
+    <div class="inhoud" id="standinhoud">
+      <div class="leeg">Kies een stand in de lijst.</div>
+    </div>
+    <div class="voet" id="voet" style="display:none">
+      <button class="knop primair" id="btnOpslaan">Opslaan en volgende</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="plan">
+  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Mijn zone</button><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
+  <div class="legende" id="legende"></div>
+  <div id="planvlak"><div class="planteller" id="planteller"></div><div class="planknoppen"><button id="btnZoomIn" aria-label="Inzoomen">+</button><button id="btnZoomUit" aria-label="Uitzoomen">−</button></div><canvas id="plancanvas"></canvas></div>
+  <div id="planblad"></div>
+</div>
+
+<div id="scanner">
+  <video id="video" playsinline muted autoplay></video>
+  <div class="bar"><span id="scanstatus" style="flex:1">Richt op de QR-code</span><button id="btnScanStop">Stop</button></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="jsqr.min.js"></script>
+<script src="fflate.min.js"></script>
+<script src="data.js"></script>
+<script src="plan.js"></script>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const STANDEN=(window.STANDEN||[]).slice().sort((a,b)=>standSort(a.stand)-standSort(b.stand)||a.naam.localeCompare(b.naam));
+// Prioriteit en vooraf-contact staan niet in de publieke data. Ze komen uit de private repo, met de back-upsleutel,
+// en worden op het toestel bewaard zodat ze ook zonder netwerk zichtbaar blijven.
+function pasPriveToe(){let p={};try{p=JSON.parse(ls('prive')||'{}')||{}}catch(e){}for(const s of STANDEN){const x=p[s.slug]||{};s.prio=x.prio||'';s.spoor=x.spoor||''}}
+pasPriveToe(); // meteen bij het laden, vóór de lijst getekend wordt
+async function haalPrive(){
+  if(!ghToken()||!navigator.onLine)return;
+  try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/_app/standen-prive.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
+    if(a.status!==200)return;const tekst=await a.text();JSON.parse(tekst);
+    if(tekst!==ls('prive')){ls('prive',tekst);pasPriveToe();renderLijst()}
+  }catch(e){}
+}
+const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
+function standSort(s){const m=String(s||'').match(/\d+/);return m?parseInt(m[0],10):999999}
+
+// ── opslag ────────────────────────────────────────────────────────────
+let db;
+function openDB(){return new Promise((ok,nee)=>{const r=indexedDB.open('bbbeurs',1);
+  r.onupgradeneeded=e=>{const d=e.target.result;d.createObjectStore('visits',{keyPath:'slug'});const m=d.createObjectStore('media',{keyPath:'id',autoIncrement:true});m.createIndex('slug','slug')};
+  r.onsuccess=e=>{db=e.target.result;ok(db)};r.onerror=()=>nee(r.error)})}
+function tx(store,mode,fn){return new Promise((ok,nee)=>{const t=db.transaction(store,mode);const s=t.objectStore(store);const req=fn(s);t.oncomplete=()=>ok(req&&req.result);t.onerror=()=>nee(t.error)})}
+const getVisit=slug=>tx('visits','readonly',s=>s.get(slug));
+const putVisit=v=>tx('visits','readwrite',s=>s.put(v));
+const allVisits=()=>tx('visits','readonly',s=>s.getAll());
+const addMedia=m=>tx('media','readwrite',s=>s.add(m));
+const delMedia=id=>tx('media','readwrite',s=>s.delete(id));
+const putMedia=m=>tx('media','readwrite',s=>s.put(m));
+const mediaVoor=slug=>tx('media','readonly',s=>s.index('slug').getAll(slug));
+const allMedia=()=>tx('media','readonly',s=>s.getAll());
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+// ── toestand ──────────────────────────────────────────────────────────
+let wie=ls('wie'), filter='mijn', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('zichtbaar');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('zichtbaar'),2200)}
+function standalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
+function mobiel(){return /iPhone|iPad|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent))}
+
+// ── start ─────────────────────────────────────────────────────────────
+async function start(){
+  await openDB();
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+  if(mobiel()&&!standalone()){$('#banner').style.display='block'}
+  // Persoonlijke link: .../#wie=Stijn zet de naam één keer, zodat niemand de verkeerde route kiest.
+  const hm=location.hash.match(/wie=(Lorenzo|Stijn|Peter)/);if(hm&&!wie){wie=hm[1];ls('wie',wie)}
+  if(!wie){$('#kies').style.display='flex';document.querySelectorAll('#kies [data-wie]').forEach(b=>b.onclick=()=>{wie=b.dataset.wie;ls('wie',wie);$('#kies').style.display='none';toonApp()});return}
+  toonApp();
+}
+async function toonApp(){
+  $('#app').style.display='grid';
+  document.title=BEURS_INFO.titel||'Beurs';
+  await herlaadVisits();
+  renderLijst();
+  if(ghToken()){telRij().then(()=>synchroniseer())}
+  haalPrive();
+  const terug=ls('huidig');if(terug){const st=STANDEN.find(x=>x.slug===terug);if(st)openStand(st)}
+  haalLogosVooraf();
+}
+// Eén keer alle logo's ophalen terwijl er netwerk is; de service worker bewaart ze.
+async function haalLogosVooraf(){if(!navigator.onLine||ls('logos_'+(window.APP_VERSIE||'')))return;const l=STANDEN.map(s=>s.logo).filter(Boolean);for(let i=0;i<l.length;i+=6){await Promise.all(l.slice(i,i+6).map(u=>fetch(u).catch(()=>{})))}ls('logos_'+(window.APP_VERSIE||''),'1')}
+async function herlaadVisits(){visits={};(await allVisits()).forEach(v=>visits[v.slug]=v)}
+
+// ── lijst ─────────────────────────────────────────────────────────────
+function zichtbareStanden(){
+  const q=zoek.trim().toLowerCase();
+  return STANDEN.filter(s=>{
+    if(filter==='mijn'&&s.bezoeker!==wie)return false;
+    if(filter==='open'&&(s.bezoeker!==wie||(visits[s.slug]&&visits[s.slug].bezocht)))return false;
+    if(q&&!(s.naam.toLowerCase().includes(q)||String(s.stand).toLowerCase().includes(q)))return false;
+    return true;
+  });
+}
+function renderLijst(){
+  toonVeilig();
+  const lijst=zichtbareStanden();
+  const mijn=STANDEN.filter(s=>s.bezoeker===wie);const gedaan=mijn.filter(s=>visits[s.slug]&&visits[s.slug].bezocht).length;
+  $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)}</span>${gedaan}/${mijn.length} bezocht`;
+  const el=$('#rijen');el.innerHTML='';
+  if(!lijst.length){el.innerHTML='<div class="leeg">Niets gevonden.</div>';return}
+  for(const s of lijst){
+    const v=visits[s.slug];const b=document.createElement('button');
+    b.className='rij'+(s.prio==='A'?' a':'')+(v&&v.bezocht?' bezocht':'')+(huidig&&huidig.slug===s.slug?' huidig':'');
+    const tegel=s.logo?`<span class="tegel metlogo"><img src="${esc(s.logo)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('metlogo');this.parentNode.textContent='${esc(s.stand)}'"></span>`:`<span class="tegel">${esc(s.stand)}</span>`;
+    b.innerHTML=`${tegel}<span class="naam">${esc(s.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(s.stand)}</span> · ${esc(kortBeurs(s.beurs))}${s.bezoeker!==wie?' · '+esc(s.bezoeker):''}${s.prio?' · <span class="badge">'+esc(s.prio)+'</span>':''}</span></span><span class="vink">${v&&v.bezocht?'✓':''}</span>`;
+    b.onclick=()=>openStand(s);el.appendChild(b);
+  }
+}
+$('#zoek').oninput=e=>{zoek=e.target.value;renderLijst()};
+for(const [id,f] of [['#filterMijn','mijn'],['#filterAlle','alle'],['#filterOpen','open']]){$(id).onclick=()=>{filter=f;document.querySelectorAll('.schakel .pil').forEach(p=>p.classList.remove('aan'));$(id).classList.add('aan');renderLijst()}}
+function kortBeurs(b){return /empack/i.test(b)?'Empack':/transport/i.test(b)?'Transport & Logistics':b}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+// ── stand ─────────────────────────────────────────────────────────────
+async function openStand(s){
+  if(recorder){toast('Stop eerst de opname');return}
+  huidig=s;ls('huidig',s.slug);
+  const v=visits[s.slug]||{slug:s.slug,bezoeker:wie,bezocht:false,contact_naam:'',contact_functie:'',contact_email:'',contact_tel:'',qr_raw:'',interesse:'',notitie:'',opname:null,geopend_om:null,opgeslagen_om:null};
+  if(!v.geopend_om)v.geopend_om=new Date().toISOString();
+  v.opname=v.opname||ls('opname_'+wie)||(wie==='Lorenzo'?'telefoon':'plaud');
+  opname=v;
+  mediaLijst=await mediaVoor(s.slug);
+  renderStand();
+  $('#lijst').classList.remove('actief');$('#stand').classList.add('actief');
+  window.scrollTo(0,0);renderLijst();
+}
+function renderStand(){
+  const s=huidig,v=opname;
+  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const idx=mijn.findIndex(x=>x.slug===s.slug);
+  $('#standtitel').textContent=s.naam;$('#standteller').textContent=idx>=0?`${idx+1}/${mijn.length}`:'';
+  $('#voet').style.display='block';
+  const el=$('#standinhoud');
+  el.innerHTML=`
+  <div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(s.stand)}</span> ${s.prio?'<span class="badge">prio '+esc(s.prio)+'</span>':''}
+    <h2>${esc(s.naam)}</h2></div>${s.logo?'<div class="logo"><img src="'+esc(s.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div><div class="meta">${esc(s.beurs)}${s.gemeente?' · '+esc(s.gemeente):''}${s.categorie?' · '+esc(s.categorie):''}</div>
+    ${s.wat_ze_doen?'<div class="doen">'+esc(s.wat_ze_doen)+'</div>':''}
+    ${s.beslisser?'<div class="doen"><b>Vraag naar:</b> '+esc(s.beslisser)+(s.functie?' ('+esc(s.functie)+')':'')+'</div>':''}
+    ${s.spoor?'<div class="meta">Vooraf: '+esc(s.spoor)+'</div>':''}
+    ${(window.PLAN&&PLAN.bron[s.slug])?'<button class="naarplan" id="btnToonPlan">Toon op grondplan'+(PLAN.bron[s.slug]==='zone'?' (zone)':'')+'</button>':'<div class="meta" style="margin-top:12px">Deze stand staat niet op het grondplan van Easyfairs.</div>'}
+  </div>
+  <div class="blok"><h2>Opname</h2>
+    <div class="keuze3" id="opnamekeuze">
+      <button class="pil ${v.opname==='telefoon'?'aan':''}" data-op="telefoon">Telefoon</button>
+      <button class="pil ${v.opname==='plaud'?'aan':''}" data-op="plaud">Plaud</button>
+      <button class="pil ${v.opname==='geen'?'aan':''}" data-op="geen">Geen opname</button>
+    </div>
+    <div id="plaudhint" class="waarsch" style="display:${v.opname==='plaud'?'block':'none'}">Plaud aan? De app noteert de tijd; de opname wordt achteraf op tijd gekoppeld.</div>
+    <div id="telefoonknoppen" class="knoppen" style="margin-top:10px;display:${v.opname==='geen'?'none':'grid'}">
+      <button class="knop" id="btnGesprek"><span class="punt"></span> Gesprek</button>
+      <button class="knop" id="btnVoice"><span class="punt"></span> Voicenote</button>
+    </div>
+    <div class="hint" id="opnamehint" style="display:${v.opname==='geen'?'none':'block'}">Gesprek: vraag eerst mondeling toestemming. Voicenote: 30 seconden na het gesprek, in je eigen woorden, met de volgende stap.</div>
+    <div class="media" id="mediaAudio"></div>
+  </div>
+  <div class="blok"><h2>Contactpersoon</h2>
+    <div class="knoppen" style="margin-bottom:10px">
+      <button class="knop geel" id="btnScan">Scan QR</button>
+      <label class="knop" for="foto">Foto kaartje<input id="foto" type="file" accept="image/*" capture="environment" style="display:none"></label>
+    </div>
+    <input class="veld" id="cNaam" placeholder="Naam" value="${esc(v.contact_naam)}" autocomplete="off">
+    <input class="veld" id="cFunctie" placeholder="Functie" value="${esc(v.contact_functie)}" autocomplete="off">
+    <input class="veld" id="cEmail" type="email" placeholder="E-mail" value="${esc(v.contact_email)}" autocomplete="off" autocapitalize="off">
+    <input class="veld" id="cTel" type="tel" placeholder="Telefoon" value="${esc(v.contact_tel)}" autocomplete="off">
+    <div class="media" id="mediaFoto"></div>
+  </div>
+  <div class="blok"><h2>Interesse</h2>
+    <div class="keuze3" id="interesse">
+      <button class="pil warm ${v.interesse==='warm'?'aan':''}" data-i="warm">Warm</button>
+      <button class="pil ${v.interesse==='lauw'?'aan':''}" data-i="lauw">Lauw</button>
+      <button class="pil koud ${v.interesse==='koud'?'aan':''}" data-i="koud">Koud</button>
+    </div>
+  </div>
+  <div class="blok"><h2>Notitie</h2>
+    <textarea class="veld" id="notitie" placeholder="Kort: wat speelt er, wie beslist, volgende stap">${esc(v.notitie)}</textarea>
+  </div>`;
+  el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=()=>{v.opname=b.dataset.op;ls('opname_'+wie,v.opname);herteken();bewaarConcept()});
+  el.querySelectorAll('#interesse .pil').forEach(b=>b.onclick=()=>{v.interesse=b.dataset.i;el.querySelectorAll('#interesse .pil').forEach(p=>p.classList.remove('aan'));b.classList.add('aan');bewaarConcept()});
+  el.oninput=bewaarConcept;
+  const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
+  $('#btnGesprek').onclick=()=>toggleRec('gesprek',$('#btnGesprek'));
+  $('#btnVoice').onclick=()=>toggleRec('voicenote',$('#btnVoice'));
+  $('#btnScan').onclick=startScan;
+  $('#foto').onchange=e=>fotoKaartje(e.target.files[0]);
+  renderMedia();
+}
+// Elke hertekening leest eerst wat er op het scherm staat. Zonder dit wiste een klik op
+// een opnameknop of opnamekeuze alles wat getypt of gescand was maar nog niet opgeslagen.
+function herteken(){if($('#cNaam'))leesVelden();renderStand()}
+let bewaarTimer=null;
+function bewaarConcept(){clearTimeout(bewaarTimer);bewaarTimer=setTimeout(async()=>{if(!huidig||!opname||!$('#cNaam'))return;leesVelden();opname.updated_at=new Date().toISOString();try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}},350)}
+setInterval(()=>{if(ghToken()&&!syncBezig)telRij()},8000);
+function leesVelden(){const v=opname;v.contact_naam=$('#cNaam').value.trim();v.contact_functie=$('#cFunctie').value.trim();v.contact_email=$('#cEmail').value.trim();v.contact_tel=$('#cTel').value.trim();v.notitie=$('#notitie').value.trim()}
+function renderMedia(){
+  const a=$('#mediaAudio'),f=$('#mediaFoto');a.innerHTML='';f.innerHTML='';
+  for(const m of mediaLijst){
+    const d=document.createElement('div');d.className='item';
+    if(m.soort==='kaartje'){const url=URL.createObjectURL(m.blob);d.innerHTML=`<img src="${url}" alt="kaartje"><span>kaartje</span>`;f.appendChild(d)}
+    else{const url=URL.createObjectURL(m.blob);d.innerHTML=`<span>${m.soort==='gesprek'?'Gesprek':'Voicenote'} · ${fmt(m.duur_s)}</span><audio controls src="${url}" style="height:32px;max-width:160px"></audio>`;a.appendChild(d)}
+    const x=document.createElement('button');x.textContent='✕';x.title='Verwijder';x.onclick=async()=>{if(confirm('Dit bestand verwijderen?')){await delMedia(m.id);mediaLijst=mediaLijst.filter(z=>z.id!==m.id);renderMedia()}};d.appendChild(x);
+  }
+}
+function fmt(s){s=Math.round(s||0);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+
+// ── opnemen ───────────────────────────────────────────────────────────
+function mime(){for(const t of ['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg']){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t}return ''}
+async function toggleRec(soort,btn){
+  if(recorder){stopRec();return}
+  if(!window.MediaRecorder){toast('Opnemen kan niet in deze browser');return}
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Geen toegang tot de microfoon');return}
+  const t=mime();recChunks=[];recSoort=soort;recorder=new MediaRecorder(stream,t?{mimeType:t}:undefined);
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data)};
+  recorder.onstop=async()=>{
+    const type=recorder.mimeType||t||'audio/mp4';const blob=new Blob(recChunks,{type});const duur=(Date.now()-recStart)/1000;
+    stream.getTracks().forEach(x=>x.stop());stream=null;recorder=null;clearInterval(recTimer);
+    if(blob.size<1000){toast('Opname te kort');herteken();return}
+    const m={slug:huidig.slug,soort,blob,mime:type,duur_s:duur,created:new Date().toISOString()};
+    m.id=await addMedia(m);mediaLijst.push(m);opname.heeft_media=true;if(ghToken())telRij();
+    if(opname.opname==='plaud'){opname.opname='telefoon';ls('opname_'+wie,'telefoon')}
+    herteken();bewaarConcept();toast('Opname bewaard');
+  };
+  recorder.start(1000);recStart=Date.now();
+  const ander=soort==='gesprek'?$('#btnVoice'):$('#btnGesprek');ander.disabled=true;
+  btn.classList.add('opneemt');
+  recTimer=setInterval(()=>{const s=(Date.now()-recStart)/1000;btn.innerHTML=`<span class="punt"></span> Stop · ${fmt(s)}`;if(s>20*60)stopRec()},500);
+  btn.innerHTML='<span class="punt"></span> Stop · 0:00';
+}
+function stopRec(){if(recorder&&recorder.state!=='inactive')recorder.stop()}
+
+// ── foto ──────────────────────────────────────────────────────────────
+function fotoKaartje(file){
+  if(!file)return;const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=async()=>{const max=1600;let w=img.width,h=img.height;const f=Math.min(1,max/Math.max(w,h));w=Math.round(w*f);h=Math.round(h*f);
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+    c.toBlob(async blob=>{const m={slug:huidig.slug,soort:'kaartje',blob,mime:'image/jpeg',duur_s:0,created:new Date().toISOString()};m.id=await addMedia(m);mediaLijst.push(m);opname.heeft_media=true;bewaarConcept();renderMedia();toast('Kaartje bewaard');URL.revokeObjectURL(url)},'image/jpeg',.85)};
+  img.onerror=()=>toast('Foto kon niet gelezen worden');img.src=url;
+}
+
+// ── QR ────────────────────────────────────────────────────────────────
+async function startScan(){
+  try{scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){toast('Geen toegang tot de camera');return}
+  const video=$('#video');video.srcObject=scanStream;$('#scanner').classList.add('actief');$('#scanstatus').textContent='Richt op de QR-code';
+  await video.play().catch(()=>{});
+  const det=('BarcodeDetector' in window)?new BarcodeDetector({formats:['qr_code']}):null;
+  const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  let bezig=false;
+  scanLoop=setInterval(async()=>{
+    if(bezig||video.readyState<2)return;bezig=true;
+    try{let tekst='';
+      if(det){const codes=await det.detect(video);if(codes.length)tekst=codes[0].rawValue}
+      else if(window.jsQR){canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);const d=ctx.getImageData(0,0,canvas.width,canvas.height);const r=jsQR(d.data,d.width,d.height,{inversionAttempts:'dontInvert'});if(r)tekst=r.data}
+      if(tekst){stopScan();verwerkQR(tekst)}
+    }catch(e){}finally{bezig=false}
+  },250);
+}
+function stopScan(){clearInterval(scanLoop);scanLoop=null;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}$('#scanner').classList.remove('actief');$('#video').srcObject=null}
+$('#btnScanStop').onclick=()=>{scanDoel='contact';stopScan()};
+function verwerkQR(tekst){
+  if(/^bbbackup:/.test(tekst)||scanDoel==='koppel'){scanDoel='contact';koppelBackup(tekst);return}
+  if(!opname)return;
+  opname.qr_raw=tekst;bewaarConcept();
+  if(/BEGIN:VCARD/i.test(tekst)){
+    const v=parseVCard(tekst);
+    if(v.naam)$('#cNaam').value=v.naam;if(v.functie)$('#cFunctie').value=v.functie;if(v.email)$('#cEmail').value=v.email;if(v.tel)$('#cTel').value=v.tel;
+    toast('Contact ingevuld uit QR');
+  }else if(/^MECARD:/i.test(tekst)){
+    const g=k=>{const m=tekst.match(new RegExp(k+':([^;]*)'));return m?m[1]:''};
+    if(g('N'))$('#cNaam').value=g('N').replace(',',' ');if(g('EMAIL'))$('#cEmail').value=g('EMAIL');if(g('TEL'))$('#cTel').value=g('TEL');
+    toast('Contact ingevuld uit QR');
+  }else{toast('QR bewaard: '+tekst.slice(0,60))}
+}
+function parseVCard(t){
+  const r={naam:'',functie:'',email:'',tel:''};const lijnen=t.replace(/\r/g,'').replace(/\n[ \t]/g,'').split('\n');
+  for(const l of lijnen){const i=l.indexOf(':');if(i<0)continue;const k=l.slice(0,i).toUpperCase();const val=l.slice(i+1).trim();
+    if(k.startsWith('FN')&&!r.naam)r.naam=val;
+    else if(k.startsWith('N')&&!k.startsWith('NOTE')&&!k.startsWith('NICKNAME')&&!r.naam){const p=val.split(';');r.naam=[p[1],p[0]].filter(Boolean).join(' ')}
+    else if(k.startsWith('TITLE')||k.startsWith('ROLE')){if(!r.functie)r.functie=val}
+    else if(k.startsWith('EMAIL')){if(!r.email)r.email=val}
+    else if(k.startsWith('TEL')){if(!r.tel)r.tel=val}
+  }
+  return r;
+}
+
+// ── opslaan ───────────────────────────────────────────────────────────
+$('#btnOpslaan').onclick=async()=>{
+  if(!huidig)return;if(recorder){toast('Stop eerst de opname');return}
+  leesVelden();const v=opname;
+  if(!v.opname){toast('Kies: Telefoon, Plaud of Geen opname');return}
+  if(v.opname==='plaud'&&!confirm('Plaud-opname gestopt?'))return;
+  v.bezocht=true;v.opgeslagen_om=new Date().toISOString();v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
+  await putVisit(v);visits[v.slug]=v;
+  toast('Bewaard');if(ghToken()){await telRij();synchroniseer()}
+  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const idx=mijn.findIndex(x=>x.slug===huidig.slug);
+  const volgende=mijn.slice(idx+1).concat(mijn.slice(0,idx)).find(x=>!(visits[x.slug]&&visits[x.slug].bezocht));
+  if(volgende){openStand(volgende)}else{huidig=null;ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');$('#standinhoud').innerHTML='<div class="leeg">Alles bezocht. Vergeet niet te versturen.</div>';$('#voet').style.display='none';renderLijst()}
+};
+$('#btnTerug').onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}if(huidig&&$('#cNaam')){leesVelden();try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}}ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst()};
+window.addEventListener('pagehide',()=>{if(huidig&&opname){try{leesVelden();putVisit(opname)}catch(e){}}});
+
+// ── back-up naar een private GitHub-repo ───────────────────────────────
+// De sleutel staat NOOIT in deze publieke pagina. Hij komt één keer per toestel binnen via
+// een QR-code of plakken, en woont daarna alleen in de opslag van dit toestel. Hij geldt voor
+// één private repo en vervalt na een week. Alles is append-only: elk bestand krijgt een
+// unieke naam, er wordt nooit iets overschreven.
+const GH_REPO='Aime-bosh/bb-beurs-data';
+const ghToken=()=>ls('gh_token')||'';
+const veilig=t=>String(t||'').replace(/[^A-Za-z0-9._-]/g,'-');
+const b64tekst=t=>btoa(unescape(encodeURIComponent(t)));
+const b64blob=b=>new Promise((ok,nee)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=()=>nee(r.error);r.readAsDataURL(b)});
+async function ghPut(pad,inhoud){
+  let laatste='';
+  for(let poging=1;poging<=4;poging++){
+    let a;try{a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${pad.split('/').map(encodeURIComponent).join('/')}`,{method:'PUT',headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'backup '+pad.split('/')[0],content:inhoud})})}catch(e){throw new Error('netwerk')}
+    if(a.status===201||a.status===200){logSync('ok '+pad.split('/').slice(1).join('/'));return true}
+    if(a.status===422){ // kan 'bestaat al' zijn, maar ook een afgekeurd verzoek: alleen geloven als het bestand er staat
+      const c=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${pad.split('/').map(encodeURIComponent).join('/')}`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json'}}).catch(()=>null);
+      if(c&&c.status===200){logSync('stond er al '+pad.split('/').pop());return true}
+      logSync('422 geweigerd '+pad.split('/').pop());throw new Error('geweigerd door GitHub (422)')}
+    logSync('http '+a.status+' poging '+poging+' '+pad.split('/').pop());
+    if(a.status===401||a.status===403||a.status===404)throw new Error('sleutel');
+    laatste='http '+a.status;await new Promise(r=>setTimeout(r,600*poging+Math.random()*500)); // 409: een collega schreef net tegelijk
+  }
+  throw new Error(laatste||'mislukt');
+}
+function extVan(mime){return mime.includes('mp4')?'m4a':mime.includes('webm')?'webm':mime.includes('ogg')?'ogg':mime.includes('jpeg')?'jpg':'bin'}
+let syncBezig=false,syncStatus={op:'',fout:'',wacht:0,geteld:false};const syncLog=[];
+function logSync(t){syncLog.push(new Date().toLocaleTimeString('nl-BE')+' '+t);if(syncLog.length>40)syncLog.shift()}
+async function telRij(){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.geteld=true;toonVeilig();return q}
+async function wachtrij(){
+  const vs=(await allVisits()).filter(v=>v.bezoeker===wie&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media)&&v.sync_at!==v.updated_at);
+  const slugs=new Set((await allVisits()).filter(v=>v.bezoeker===wie).map(v=>v.slug));
+  const ms=(await allMedia()).filter(m=>slugs.has(m.slug)&&!m.sync);
+  return{vs,ms};
+}
+async function synchroniseer(){
+  if(syncBezig||!ghToken()||!wie)return null;if(!navigator.onLine){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.fout='geen netwerk';toonVeilig();return null}
+  syncBezig=true;let gelukt=0;syncStatus.fout='';
+  try{
+    const{vs,ms}=await telRij();
+    for(const m of ms){const st=perSlug[m.slug]||{};const pad=`${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;
+      await ghPut(pad,await b64blob(m.blob));m.sync=new Date().toISOString();await putMedia(m);const i=mediaLijst.findIndex(x=>x.id===m.id);if(i>=0)mediaLijst[i].sync=m.sync;gelukt++;syncStatus.wacht=Math.max(0,syncStatus.wacht-1);toonVeilig()}
+    for(const v of vs){const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;
+      await ghPut(`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
+      const vers=await getVisit(v.slug);if(vers){vers.sync_at=v.updated_at;await putVisit(vers);visits[v.slug]=vers;if(opname&&opname.slug===v.slug)opname.sync_at=v.updated_at}gelukt++}
+    syncStatus.op=new Date().toISOString();
+  }catch(e){syncStatus.fout=e.message==='sleutel'?'sleutel ongeldig of vervallen':e.message==='netwerk'?'geen netwerk':e.message}
+  finally{syncBezig=false;await telRij();if(syncStatus.fout)logSync('fout: '+syncStatus.fout)}
+  return gelukt;
+}
+async function koppelBackup(tekst){
+  const t=String(tekst||'').trim().replace(/^bbbackup:/,'');if(!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(t)){toast('Dit is geen geldige sleutel');return false}
+  ls('gh_token',t);
+  try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}`,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+    if(a.status!==200){ls('gh_token','');toast('Sleutel geweigerd door GitHub ('+a.status+')');toonVeilig();return false}
+    const r=await a.json();if(!r.private){ls('gh_token','');toast('Stop: de gegevensrepo is niet privaat');return false}
+  }catch(e){toast('Sleutel bewaard. Controle volgt zodra er netwerk is.');toonVeilig();return true}
+  toast('Back-up gekoppeld');toonVeilig();synchroniseer();haalPrive();return true;
+}
+window.addEventListener('online',()=>synchroniseer());
+if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sync:()=>synchroniseer(),teken:()=>tekenNu(),view:()=>view};
+setInterval(()=>synchroniseer(),45000);
+
+// ── veiligheid: wat staat alleen nog op dit toestel? ───────────────────
+function nietVerstuurd(){const sinds=ls('laatst_verstuurd')||'';return Object.values(visits).filter(v=>v.bezoeker===wie&&(v.bezocht||v.contact_naam||v.notitie)&&(v.updated_at||'')>sinds)}
+function toonVeilig(){
+  const knop=$('#btnExport');const bol=$('#bol');const blok=$('#veilig');if(!knop)return;
+  if(ghToken()){
+    const w=syncStatus.wacht;bol.textContent=w;knop.classList.toggle('open',w>0);knop.classList.toggle('dringend',w>=5||!!(w&&syncStatus.fout&&syncStatus.fout!=='geen netwerk'));
+    if(syncStatus.fout&&syncStatus.fout!=='geen netwerk'){blok.innerHTML=`<b>Back-up lukt niet: ${esc(syncStatus.fout)}.</b>${w} ${w===1?'item wacht':'items wachten'}. Tik op Verstuur om een zip te sturen, en meld dit aan Lorenzo.`;blok.classList.add('toon')}
+    else if(w>0||syncBezig||!syncStatus.geteld){blok.innerHTML=`<b>${syncBezig?'Back-up bezig':'Back-up'}${w?': '+w+(w===1?' item wacht':' items wachten'):''}.</b>${syncStatus.fout==='geen netwerk'?'Geen netwerk. De app probeert het vanzelf opnieuw.':'Wordt doorgestuurd.'}`;blok.classList.add('toon')}
+    else{const t=syncStatus.op?new Date(syncStatus.op).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'}):'';blok.innerHTML=`<b>✓ Alles staat veilig in de back-up${t?' · '+t:''}.</b>`;blok.classList.add('toon');blok.style.borderLeftColor='var(--groen)'}
+    if(w>0||syncStatus.fout||syncBezig||!syncStatus.geteld)blok.style.borderLeftColor='';
+    return}
+  const open=nietVerstuurd();bol.textContent=open.length;knop.classList.toggle('open',open.length>0);
+  const oudste=open.reduce((m,v)=>Math.min(m,new Date(v.updated_at||Date.now()).getTime()),Date.now());const wacht=(Date.now()-oudste)/60000;
+  const dringend=open.length>=5||(open.length>0&&wacht>60);knop.classList.toggle('dringend',dringend);
+  blok.style.borderLeftColor='';
+  blok.innerHTML=`<b>Back-up is nog niet gekoppeld op dit toestel.</b>${open.length?open.length+(open.length===1?' bezoek staat':' bezoeken staan')+' alleen hier. ':''}<button class="pil" id="btnKoppel" style="margin-top:8px">Koppel back-up (scan de sleutel)</button>`;blok.classList.add('toon');
+  const k=$('#btnKoppel');if(k)k.onclick=()=>{scanDoel='koppel';startScan()};
+}
+setInterval(()=>{if(wie)toonVeilig()},60000);
+let scanDoel='contact';
+
+// ── grondplan ─────────────────────────────────────────────────────────
+const PLAN=window.PLAN||null;const perSlug={};STANDEN.forEach(s=>perSlug[s.slug]=s);
+let vb=null,planKlaar=false,planZoom=()=>{};
+const COLLEGAS=['Lorenzo','Stijn','Peter'];
+function collegaKlasse(naam){const rest=COLLEGAS.filter(x=>x!==wie);const i=rest.indexOf(naam);return i===0?'c1':i===1?'c2':'c0'}
+function standKlasse(st,nuSlug){
+  const ss=st.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return 'leeg';
+  if(nuSlug&&st.slugs.includes(nuSlug))return 's nu';
+  const gedaan=ss.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
+  const mijn=ss.some(x=>x.bezoeker===wie);
+  if(gedaan===ss.length)return 's klaar';
+  if(gedaan>0)return 's deels';
+  if(ss.some(x=>{const v=visits[x.slug];return v&&!v.bezocht&&(v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media)}))return 's bezig';
+  return mijn?'s mijn':'s '+collegaKlasse(ss[0].bezoeker);
+}
+// ── grondplan op canvas ──
+// Een SVG met 500 vormen en 200 teksten herberekent op een iPhone bij elke beweging, ook met
+// een CSS-transform erop. Een canvas tekent hetzelfde in enkele milliseconden per beeld, dus
+// slepen en knijpen volgen de vinger zonder tussenstap.
+let view={x:0,y:0,k:1},planNu=null,planGekozen=-1,planRaf=0,planGebaar=false;const logoCache={};
+function planInit(){if(!PLAN||PLAN._ok)return;PLAN._ok=true;
+  const maak=o=>{const g=o.d.match(/-?[\d.]+/g).map(Number);o.pts=[];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<g.length;i+=2){o.pts.push([g[i],g[i+1]]);x0=Math.min(x0,g[i]);x1=Math.max(x1,g[i]);y0=Math.min(y0,g[i+1]);y1=Math.max(y1,g[i+1])}o.b={x0,y0,x1,y1,w:x1-x0,h:y1-y0};o.p=new Path2D(o.d)};
+  PLAN.standen.forEach(maak);PLAN.achtergrond.forEach(maak);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;PLAN.standen.concat(PLAN.achtergrond.filter(a=>a.k==='stand'||a.k==='zone')).forEach(a=>{x0=Math.min(x0,a.b.x0);y0=Math.min(y0,a.b.y0);x1=Math.max(x1,a.b.x1);y1=Math.max(y1,a.b.y1)});
+  PLAN.vloer={x:x0-35,y:y0-35,w:x1-x0+70,h:y1-y0+70};
+  PLAN.achtergrond.forEach(a=>{if(a.k==='zone')a.gang=Math.min(a.b.w,a.b.h)<45&&Math.max(a.b.w,a.b.h)>300});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(tekenPlan);
+}
+const STIJL={'s mijn':['#ffffff','#14171c',2.5],'s c1':['#e2e8ee','#93a1ae',2],'s c2':['#efe6d9','#b3a48d',2],'s c0':['#e8e8e8','#9a9a9a',2],'s deels':['#fde3df','#f37262',2.5],'s bezig':['#fdd9d3','#f37262',2.5],'s klaar':['#77b978','#4f9a52',2.5],'s nu':['#fa8072','#14171c',4.5],'leeg':['#efeeea','#dddcd6',1.5]};
+function rondeRechthoek(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function logoVan(src){let im=logoCache[src];if(!im){im=logoCache[src]=new Image();im.onload=()=>tekenPlan();im.src=src}return im.complete&&im.naturalWidth?im:null}
+function tekenPlan(){if(planRaf||!PLAN)return;planRaf=requestAnimationFrame(()=>{planRaf=0;tekenNu()})}
+function tekenNu(){
+  const c=$('#plancanvas'),vlak=$('#planvlak');if(!c||!$('#plan').classList.contains('actief'))return;planInit();
+  const r=vlak.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,planGebaar?2:3);const W=Math.round(r.width*dpr),H=Math.round(r.height*dpr);
+  if(c.width!==W||c.height!==H){c.width=W;c.height=H}
+  const ctx=c.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#ecebe7';ctx.fillRect(0,0,W,H);
+  const k=view.k*dpr;ctx.setTransform(k,0,0,k,-view.x*k,-view.y*k);
+  const z={x0:view.x,y0:view.y,x1:view.x+r.width/view.k,y1:view.y+r.height/view.k};const zie=b=>!(b.x1<z.x0||b.x0>z.x1||b.y1<z.y0||b.y0>z.y1);
+  ctx.lineJoin='round';
+  // gebouw
+  ctx.fillStyle='#e3e2dd';ctx.strokeStyle='#d3d2cc';ctx.lineWidth=1.5;for(const a of PLAN.achtergrond){if((a.k==='hal'||a.k==='overig')&&zie(a.b)&&a.b.w<PLAN.w*2){ctx.fill(a.p);ctx.stroke(a.p)}}
+  // beursvloer
+  const v=PLAN.vloer;if(!planGebaar){ctx.shadowColor='rgba(0,0,0,.16)';ctx.shadowBlur=14*k;ctx.shadowOffsetY=3*k}
+  rondeRechthoek(ctx,v.x,v.y,v.w,v.h,26);ctx.fillStyle='#fbfbf9';ctx.fill();ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#cfcec8';ctx.lineWidth=3;ctx.stroke();
+  // gangen en zones
+  for(const a of PLAN.achtergrond){if(a.k!=='zone'||!zie(a.b))continue;if(a.gang){ctx.fillStyle='#fde4df';ctx.fill(a.p)}else{ctx.fillStyle='#fdf0ed';ctx.fill(a.p);ctx.setLineDash([6,5]);ctx.strokeStyle='#f3b3a9';ctx.lineWidth=1.5;ctx.stroke(a.p);ctx.setLineDash([])}}
+  // standen die niet op onze lijst staan
+  let st=STIJL.leeg;ctx.fillStyle=st[0];ctx.strokeStyle=st[1];ctx.lineWidth=st[2];for(const a of PLAN.achtergrond){if(a.k==='stand'&&zie(a.b)){ctx.fill(a.p);ctx.stroke(a.p)}}
+  // labels
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const l of PLAN.labels){const t=l.t.toUpperCase();
+    if(l.k==='hal'){ctx.save();ctx.translate(l.x,l.y);ctx.rotate(-Math.PI/2);ctx.font="800 54px 'League Spartan',sans-serif";ctx.fillStyle='rgba(20,23,28,.07)';ctx.fillText(t,0,0);ctx.restore()}
+    else if(l.k==='ingang'){const tt=l.t.replace(/^Entrance\s*/i,'Ingang ');ctx.font="600 17px 'League Spartan',sans-serif";const w=ctx.measureText(tt).width+52;rondeRechthoek(ctx,l.x-w/2,l.y-17,w,34,17);ctx.fillStyle='#14171c';ctx.fill();ctx.fillStyle='#fff';ctx.fillText(tt,l.x+8,l.y+2);ctx.beginPath();ctx.moveTo(l.x-w/2+16,l.y+6);ctx.lineTo(l.x-w/2+23,l.y-6);ctx.lineTo(l.x-w/2+30,l.y+6);ctx.closePath();ctx.fill()}
+    else{const lang=/mainstreet/i.test(l.t);ctx.save();ctx.translate(l.x,l.y);if(lang)ctx.rotate(-Math.PI/2);ctx.font=`600 ${lang?17:19}px 'League Spartan',sans-serif`;ctx.fillStyle=lang?'#e59c90':'#b9a9a4';ctx.fillText(t,0,0);ctx.restore()}}
+  // onze standen
+  const dicht=r.width/view.k<820;const klein=13*view.k<6.5;
+  PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=standKlasse(s0,planNu);s0._k=kl;st=STIJL[kl]||STIJL.leeg;ctx.fillStyle=st[0];ctx.strokeStyle=st[1];ctx.lineWidth=st[2];
+    if(kl==='s bezig')ctx.setLineDash([7,4]);ctx.fill(s0.p);ctx.stroke(s0.p);ctx.setLineDash([]);
+    if(i===planGekozen){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(s0.p)}});
+  PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=s0._k;const ss=s0.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return;const b=s0.b;const eerste=ss[0];
+    const klaar=kl==='s klaar';const gedaan=ss.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
+    let ty=s0.cy;
+    if(dicht&&!s0.zone&&!klaar&&eerste.logo&&Math.min(b.w,b.h)>=34){const im=logoVan(eerste.logo);if(im){const m=Math.min(Math.min(b.w,b.h)*0.62,70);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,s0.cx-w/2,s0.cy-7-h/2,w,h);ty=s0.cy+Math.min(b.w,b.h)*0.31+4}}
+    if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',s0.cx,s0.cy+1)}
+    else if(!klein){const ander=/ c\d/.test(kl);ctx.font=`${ander?500:700} 13px 'League Spartan',sans-serif`;ctx.fillStyle=ander?'#6f7880':'#14171c';ctx.fillText(s0.zone?`${gedaan}/${ss.length}`:String(eerste.stand).split('|')[0].trim(),s0.cx,ty+1)}
+    if(kl==='s mijn'&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}});
+  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const af=mijn.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
+  $('#planteller').textContent=`${af}/${mijn.length} bezocht`;
+}
+function zetLegende(){const rest=COLLEGAS.filter(x=>x!==wie);$('#legende').innerHTML=`<span><i class="l mijn"></i>${esc(wie)}</span><span><i class="l c1"></i>${esc(rest[0])}</span><span><i class="l c2"></i>${esc(rest[1])}</span><span><i class="l bezig"></i>begonnen</span><span><i class="l klaar"></i>bezocht</span><span><i class="l pa"></i>prio A</span>`}
+function pasIn(x0,y0,x1,y1,marge){const r=$('#planvlak').getBoundingClientRect();const w=(x1-x0)+marge*2,h=(y1-y0)+marge*2;const k=Math.min(r.width/w,r.height/h);view={k,x:(x0+x1)/2-r.width/k/2,y:(y0+y1)/2-r.height/k/2};tekenPlan()}
+function zoneVan(filter){planInit();let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;PLAN.standen.forEach(st=>{if(!st.slugs.some(filter))return;x0=Math.min(x0,st.b.x0);y0=Math.min(y0,st.b.y0);x1=Math.max(x1,st.b.x1);y1=Math.max(y1,st.b.y1)});return x0<1e9?[x0,y0,x1,y1]:null}
+function openPlan(nuSlug){
+  if(!PLAN){toast('Geen grondplan beschikbaar');return}
+  if($('#cNaam')&&huidig){leesVelden();putVisit(opname).catch(()=>{})}
+  planNu=nuSlug||null;planGekozen=-1;$('#plan').classList.add('actief');$('#planblad').classList.remove('actief');zetLegende();planInit();
+  requestAnimationFrame(()=>{const z=nuSlug?zoneVan(x=>x===nuSlug):null;const mz=zoneVan(x=>perSlug[x]&&perSlug[x].bezoeker===wie);if(z)pasIn(z[0],z[1],z[2],z[3],180);else if(mz)pasIn(mz[0],mz[1],mz[2],mz[3],60);else pasIn(0,0,PLAN.w,PLAN.h,20);if(!planKlaar){koppelPlan();planKlaar=true}});
+}
+function sluitPlan(){$('#plan').classList.remove('actief')}
+function infoKaart(x){const v=visits[x.slug];const klaar=v&&v.bezocht;
+  return `<div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(x.stand)}</span> ${x.prio?'<span class="badge">prio '+esc(x.prio)+'</span>':''}<h2>${esc(x.naam)}</h2></div>${x.logo?'<div class="logo"><img src="'+esc(x.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div>
+    <div class="meta">${esc(kortBeurs(x.beurs))}${x.gemeente?' · '+esc(x.gemeente):''}${x.categorie?' · '+esc(x.categorie):''}</div>
+    ${x.wat_ze_doen?'<div class="doen">'+esc(x.wat_ze_doen)+'</div>':''}
+    ${v&&v.contact_naam?'<div class="doen"><b>Gesproken met:</b> '+esc(v.contact_naam)+(v.contact_functie?' ('+esc(v.contact_functie)+')':'')+'</div>':''}
+    <span class="status ${klaar?'ok':''}">${klaar?'✓ bezocht':'nog te doen'} · ${esc(x.bezoeker)}${x.spoor?' · '+esc(x.spoor):''}</span>
+    <div class="acties"><button class="knop open" data-open="${esc(x.slug)}">${klaar?'Bezoek bekijken':'Bezoek starten'}</button><button class="knop dicht" data-dicht="1">Sluit</button></div></div>`}
+function toonBlad(st,i){const ss=st.slugs.map(x=>perSlug[x]).filter(Boolean);const b=$('#planblad');if(!ss.length){b.classList.remove('actief');return}
+  let h='<div class="greep"></div>';
+  if(ss.length<=3){if(ss.length>1)h+=`<h3>Gedeelde stand · ${ss.length} bedrijven</h3>`;h+=ss.map(infoKaart).join('')}
+  else{h+=`<h3>${st.zone?'Zone':'Stand'} · ${ss.length} bedrijven · tik voor de info</h3><div id="bladlijst"></div>`}
+  b.innerHTML=h;
+  if(ss.length>3){const l=$('#bladlijst');for(const x of ss){const v=visits[x.slug];const k=document.createElement('button');k.className='rij'+(v&&v.bezocht?' bezocht':'');
+    const tegel=x.logo?`<span class="tegel metlogo"><img src="${esc(x.logo)}" alt=""></span>`:`<span class="tegel">${esc(x.stand)}</span>`;
+    k.innerHTML=`${tegel}<span class="naam">${esc(x.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(x.stand)}</span> · ${esc(x.bezoeker)}</span></span><span class="vink">${v&&v.bezocht?'✓':''}</span>`;
+    k.onclick=()=>{b.innerHTML='<div class="greep"></div>'+infoKaart(x);koppelBlad()};l.appendChild(k)}}
+  koppelBlad();b.classList.add('actief');b.scrollTop=0;planGekozen=i;tekenPlan();
+}
+function koppelBlad(){const b=$('#planblad');b.querySelectorAll('[data-open]').forEach(k=>k.onclick=()=>{const x=perSlug[k.dataset.open];sluitPlan();openStand(x)});b.querySelectorAll('[data-dicht]').forEach(k=>k.onclick=()=>{b.classList.remove('actief');planGekozen=-1;tekenPlan()})}
+function koppelPlan(){
+  const vlak=$('#planvlak');const pt=new Map();let start=null,bewogen=0,knijp=null;
+  const grens=kk=>{const r=vlak.getBoundingClientRect();return Math.min(Math.max(kk,Math.min(r.width/(PLAN.w*2.2),r.height/(PLAN.h*2.2))),r.width/110)};
+  const zoomOp=(f,lx,ly)=>{const px=view.x+lx/view.k,py=view.y+ly/view.k;const nk=grens(view.k*f);view={k:nk,x:px-lx/nk,y:py-ly/nk};tekenPlan()};
+  planZoom=(f,cx,cy)=>{const r=vlak.getBoundingClientRect();zoomOp(1/f,cx-r.left,cy-r.top)};
+  vlak.addEventListener('pointerdown',e=>{if(e.target.closest('.planknoppen'))return;vlak.setPointerCapture(e.pointerId);pt.set(e.pointerId,{x:e.clientX,y:e.clientY});planGebaar=true;if(pt.size===1){start={x:e.clientX,y:e.clientY};bewogen=0}if(pt.size===2){const a=[...pt.values()];knijp=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}});
+  vlak.addEventListener('pointermove',e=>{if(!pt.has(e.pointerId))return;const vorig=pt.get(e.pointerId);pt.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pt.size===1){const dx=e.clientX-vorig.x,dy=e.clientY-vorig.y;bewogen+=Math.abs(dx)+Math.abs(dy);view.x-=dx/view.k;view.y-=dy/view.k;tekenPlan()}
+    else if(pt.size===2&&knijp){const a=[...pt.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(d>0){const r=vlak.getBoundingClientRect();zoomOp(d/knijp,(a[0].x+a[1].x)/2-r.left,(a[0].y+a[1].y)/2-r.top);knijp=d;bewogen+=10}}});
+  const raak=(cx,cy)=>{const r=vlak.getBoundingClientRect();const x=view.x+(cx-r.left)/view.k,y=view.y+(cy-r.top)/view.k;
+    for(let i=PLAN.standen.length-1;i>=0;i--){const s0=PLAN.standen[i];const b=s0.b;if(x<b.x0||x>b.x1||y<b.y0||y>b.y1)continue;const p=s0.pts;let binnen=false;for(let a=0,c=p.length-1;a<p.length;c=a++){if((p[a][1]>y)!==(p[c][1]>y)&&x<(p[c][0]-p[a][0])*(y-p[a][1])/(p[c][1]-p[a][1])+p[a][0])binnen=!binnen}if(binnen)return i}return -1};
+  const los=e=>{if(!pt.has(e.pointerId))return;pt.delete(e.pointerId);if(pt.size<2)knijp=null;
+    if(pt.size===0){planGebaar=false;const tik=start&&bewogen<10;if(tik){const i=raak(e.clientX,e.clientY);if(i>=0)toonBlad(PLAN.standen[i],i);else{$('#planblad').classList.remove('actief');planGekozen=-1}}start=null;tekenPlan()}};
+  vlak.addEventListener('pointerup',los);vlak.addEventListener('pointercancel',los);
+  vlak.addEventListener('wheel',e=>{e.preventDefault();const r=vlak.getBoundingClientRect();zoomOp(e.deltaY>0?0.89:1.12,e.clientX-r.left,e.clientY-r.top)},{passive:false});
+  window.addEventListener('resize',()=>tekenPlan());
+  new ResizeObserver(()=>tekenPlan()).observe(vlak);
+}
+$('#btnPlan').onclick=()=>openPlan(null);
+$('#btnPlanDicht').onclick=sluitPlan;
+$('#btnZoomIn').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(0.7,r.left+r.width/2,r.top+r.height/2)};
+$('#btnZoomUit').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(1.4,r.left+r.width/2,r.top+r.height/2)};
+$('#btnPlanAlles').onclick=()=>pasIn(0,0,PLAN.w,PLAN.h,20);
+$('#btnPlanMijn').onclick=()=>{const z=zoneVan(x=>perSlug[x]&&perSlug[x].bezoeker===wie);if(z)pasIn(z[0],z[1],z[2],z[3],60)};
+
+// ── versturen ─────────────────────────────────────────────────────────
+$('#btnExport').onclick=async()=>{
+  if(recorder){toast('Stop eerst de opname');return}
+  if(huidig&&$('#cNaam')){leesVelden();opname.updated_at=new Date().toISOString();await putVisit(opname);visits[opname.slug]=opname}
+  if(ghToken()){toast('Back-up bijwerken...');await synchroniseer();const q=await wachtrij();if(!q.vs.length&&!q.ms.length&&!syncStatus.fout){toast('Alles staat veilig in de back-up');return}
+    if(!confirm('De back-up is niet volledig gelukt ('+(syncStatus.fout||'er wacht nog iets')+'). Wil je een zip maken en die doorsturen?'))return}
+  const vs=(await allVisits()).filter(v=>v.bezoeker===wie);const ms=await allMedia();
+  if(!vs.length){toast('Nog niets om te versturen');return}
+  toast('Pakketje maken...');
+  const bestanden={};
+  const slugs=new Set(vs.map(v=>v.slug));
+  const mediaMeta=[];
+  // Zelfde map en zelfde bestandsnaam als in de back-uprepo: <bezoeker>/<slug>/<soort>-<tijdstip>.<ext>.
+  // Komt iets langs beide wegen binnen, dan valt het op dezelfde plek en is het één bestand.
+  for(const m of ms){if(!slugs.has(m.slug))continue;const naam=`${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;bestanden[naam]=new Uint8Array(await m.blob.arrayBuffer());mediaMeta.push({bestand:naam,slug:m.slug,soort:m.soort,mime:m.mime,duur_s:m.duur_s,created:m.created,in_backup:!!m.sync})}
+  for(const v of vs){const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;bestanden[`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at||v.opgeslagen_om||'concept')}.json`]=fflate.strToU8(JSON.stringify(kopie,null,1))}
+  const json={bezoeker:wie,beurs:BEURS_INFO.titel,geexporteerd:new Date().toISOString(),visits:vs.map(v=>Object.assign({},v,{naam:(perSlug[v.slug]||{}).naam,stand:(perSlug[v.slug]||{}).stand})),media:mediaMeta};
+  bestanden['overzicht-'+veilig(wie)+'.json']=fflate.strToU8(JSON.stringify(json,null,1));
+  const zip=fflate.zipSync(bestanden,{level:0});
+  const d=new Date();const stamp=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+  const file=new File([zip],`beurs-${wie.toLowerCase()}-${stamp}.zip`,{type:'application/zip'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:'Beursbezoeken '+wie});ls('laatst_verstuurd',new Date().toISOString());toonVeilig();toast('Verstuurd');return}catch(e){if(e.name==='AbortError')return}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
+  ls('laatst_verstuurd',new Date().toISOString());toonVeilig();
+  toast('Zip gedownload: stuur hem door naar Lorenzo');
+};
+
+// ── meer: wie, wissen ─────────────────────────────────────────────────
+$('#btnMeer').onclick=async()=>{
+  const k=prompt(`Ingelogd als ${wie}.\n\nTyp:\n  naam  = andere naam kiezen\n  koppel = back-up koppelen (sleutel plakken)\n  zip   = een zip maken en delen\n  wis   = alle gegevens op dit toestel wissen\n  info  = versie en aantal\n  log   = de laatste verzendingen naar de back-up`);
+  if(!k)return;
+  if(k.trim().toLowerCase()==='log'){alert(syncLog.length?syncLog.slice(-15).join('\n'):'Nog niets verstuurd in deze sessie.');return}
+  if(k.trim().toLowerCase()==='koppel'){const t=prompt('Plak hier de sleutel');if(t)koppelBackup(t);return}
+  if(k.trim().toLowerCase()==='zip'){const t=ls('gh_token');ls('gh_token','');try{await $('#btnExport').onclick()}finally{ls('gh_token',t||'')}toonVeilig();return}
+  if(k.trim().toLowerCase()==='naam'){ls('wie','');location.reload();return}
+  if(k.trim().toLowerCase()==='wis'){
+    const n=(await allVisits()).length;
+    if(confirm(`Alles wissen op dit toestel? ${n} bezoeken en alle opnames. Alleen doen als je zip bij Lorenzo is.`)&&confirm('Zeker? Dit kan niet ongedaan gemaakt worden.')){
+      await tx('visits','readwrite',s=>s.clear());await tx('media','readwrite',s=>s.clear());await herlaadVisits();huidig=null;$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();toast('Gewist')}
+    return}
+  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();alert(`Versie ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
+};
+
+start().catch(e=>{document.body.innerHTML='<div class="leeg">De app kon niet starten: '+esc(e.message)+'</div>'});
+})();
+</script>
+</body>
+</html>
