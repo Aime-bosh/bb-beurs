@@ -316,7 +316,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v21';
+const APP_BUILD='2026-09-23 v22';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -874,7 +874,11 @@ function tekenNu(){
   // Twee beurten: eerst alle vullingen, dan alle randen. Anders bedekt de vulling van een later
   // getekend buurvak de rand van het vorige, en heeft een vak maar drie lijnen.
   const zichtbaar=[];PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=standKlasse(s0,planNu);s0._k=kl;zichtbaar.push(i);st=STIJL[kl]||STIJL.leeg;ctx.fillStyle=st[0];ctx.fill(s0.p)});
-  for(const i of zichtbaar){const s0=PLAN.standen[i];st=STIJL[s0._k]||STIJL.leeg;ctx.strokeStyle=st[1];ctx.lineWidth=st[2];if(s0._k==='s bezig'||s0._k==='s begonnen')ctx.setLineDash([7,4]);ctx.stroke(s0.p);ctx.setLineDash([]);if(i===planGekozen){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(s0.p)}}
+  // Op een gedeelde lijn wint de laatst getekende rand. Daarom in vaste volgorde: eerst de grijze
+  // (buiten het filter), dan de groene (bezocht), dan de zwarte, en de gekozen stand helemaal laatst.
+  const rang=k=>k==='s buiten'?0:k==='s klaar'?1:k==='s nu'?3:2;
+  for(const i of zichtbaar.slice().sort((a,b)=>rang(PLAN.standen[a]._k)-rang(PLAN.standen[b]._k))){const s0=PLAN.standen[i];st=STIJL[s0._k]||STIJL.leeg;ctx.strokeStyle=st[1];ctx.lineWidth=st[2];if(s0._k==='s bezig'||s0._k==='s begonnen')ctx.setLineDash([7,4]);ctx.stroke(s0.p);ctx.setLineDash([])}
+  if(planGekozen>=0&&zichtbaar.includes(planGekozen)){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(PLAN.standen[planGekozen].p)}
   // Vaste regels voor de inhoud van een vak: één lettergrootte voor alle nummers tegelijk (de grootste
   // die in het smalste zichtbare vak past), het nummer altijd gecentreerd onderaan met dezelfde marge,
   // het logo altijd in de ruimte erboven en geschaald naar het vak. Te klein voor beide: alleen het
