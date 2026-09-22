@@ -1,10 +1,12 @@
 // Kleine service worker: de app-schil in de cache, zodat het icoon op het beginscherm ook
 // zonder netwerk opent. Cache-first voor de eigen bestanden; verhoog VERSIE bij elke wijziging.
-const VERSIE = 'bb-beurs-v12';
+const VERSIE = 'bb-beurs-v13';
 const BESTANDEN = ['./', './index.html', './data.js', './plan.js', './jsqr.min.js', './fflate.min.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png', './league-spartan.woff2', './logo-zwart.svg', './logo-wit.svg', './symbool-wit.svg'];
 
+// cache:'reload' haalt elk bestand vers van het netwerk. Zonder dat kan de browsercache binnen de
+// tien minuten na een push nog de vorige index.html onder de nieuwe versie zetten.
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSIE).then(c => c.addAll(BESTANDEN)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSIE).then(c => c.addAll(BESTANDEN.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSIE).map(k => caches.delete(k)))).then(() => self.clients.claim()));

@@ -130,7 +130,10 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 .legende{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px 7px;font-size:13px;color:var(--grijs);border-bottom:1px solid var(--lijn)}
 .legende span{display:flex;align-items:center;gap:6px}
 .legende .l{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--inkt);display:inline-block;margin-top:-3px}
-.l.mijn{background:var(--wit)}.l.klaar{background:var(--groen);border-color:var(--groen)}.l.c1{background:#e2e8ee;border-color:#93a1ae}.l.c2{background:#efe6d9;border-color:#b3a48d}.l.c0{background:#e8e8e8;border-color:#9a9a9a}.l.geen{background:#efeeea;border-color:#dddcd6}.l.bezig{background:#fdd9d3;border-color:#f37262;border-style:dashed}.l.pa{background:var(--zalm);border-color:var(--zalm);border-radius:50%;width:11px;height:11px}
+.l.mijn,.l.open{background:var(--wit)}.l.klaar{background:var(--groen);border-color:var(--groen)}.l.c1{background:#e2e8ee;border-color:#93a1ae}.l.c2{background:#efe6d9;border-color:#b3a48d}.l.c0{background:#e8e8e8;border-color:#9a9a9a}.l.geen{background:#efeeea;border-color:#dddcd6}.l.bezig{background:#fdd9d3;border-color:#f37262;border-style:dashed;border-width:2px}.l.begonnen{background:#fde3df;border-color:#f37262;border-style:dashed}.l.deels{background:#fde3df;border-color:#f37262}.l.pa{background:var(--zalm);border-color:var(--zalm);border-radius:50%;width:11px;height:11px}
+.rij .stat{color:var(--zalm-d);font-weight:600;text-transform:none;letter-spacing:0}
+.rij.bezocht .stat{color:var(--groen)}
+#teammelding{margin:0 0 12px}
 #planvlak{flex:1;min-height:0;overflow:hidden;touch-action:none;background:#ecebe7;position:relative}
 #plancanvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
 #plansvg .gebouw{fill:#e3e2dd;stroke:#d3d2cc;stroke-width:1.5}
@@ -212,7 +215,7 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
   <section id="lijst" class="paneel actief">
     <div class="kop">
       <img class="merk" src="symbool-wit.svg" alt="Bosh & Bordon">
-      <h1 id="lijsttitel">Mijn route</h1>
+      <h1 id="lijsttitel">Standen</h1>
       <button id="btnExport" class="accent" title="Verstuur naar Lorenzo">Verstuur<span class="bol" id="bol"></span></button>
       <button id="btnMeer" title="Meer">⋯</button>
     </div>
@@ -220,9 +223,9 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
       <div class="veilig" id="veilig"></div>
       <input id="zoek" class="zoek" type="search" placeholder="Zoek bedrijf of standnummer" autocomplete="off">
       <div class="schakel">
-        <button class="pil aan" id="filterMijn">Mijn standen</button>
-        <button class="pil" id="filterAlle">Alle standen</button>
-        <button class="pil" id="filterOpen">Nog te doen</button>
+        <button class="pil aan" id="filterOpen">Open</button>
+        <button class="pil" id="filterAlle">Alle</button>
+        <button class="pil" id="filterMijn">Mijn bezoeken</button>
         <button class="pil plan" id="btnPlan">Grondplan</button>
         <button class="pil" id="btnPitch">Pitch</button>
       </div>
@@ -235,21 +238,20 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
       <button class="terug" id="btnTerug" aria-label="Terug">‹</button>
       <img class="merk" src="symbool-wit.svg" alt="">
       <h1 id="standtitel">Stand</h1>
-      <span class="klein" id="standteller"></span>
       <button class="pitchknop" id="btnPitchStand">Pitch</button>
     </div>
     <div class="inhoud" id="standinhoud">
       <div class="leeg">Kies een stand in de lijst.</div>
     </div>
     <div class="voet" id="voet" style="display:none">
-      <button class="knop primair" id="btnOpslaan">Opslaan en volgende</button>
+      <button class="knop primair" id="btnOpslaan">Opslaan</button>
     </div>
   </section>
 
 </div>
 
 <div id="plan">
-  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Mijn zone</button><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
+  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Laatste</button><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
   <div class="legende" id="legende"></div>
   <div id="planvlak"><div class="planteller" id="planteller"></div><div class="planknoppen"><button id="btnZoomIn" aria-label="Inzoomen">+</button><button id="btnZoomUit" aria-label="Uitzoomen">−</button></div><canvas id="plancanvas"></canvas></div>
   <div id="planblad"></div>
@@ -306,6 +308,67 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
+const APP_BUILD='2026-09-22 v13';
+
+// ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
+// Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
+// visit-bestand per collega en per stand uit de repo. Die teamdata blijft strikt apart van de
+// eigen bezoeken: nooit in de visits-opslag en nooit in het geheugenobject `visits`, want
+// alles wat daarin zit, wordt als eigen concept bewaard en onder de eigen naam doorgestuurd.
+let team={},teamCache={etag:'',paden:{},data:{}},teamBezig=false;
+try{const c=JSON.parse(ls('team')||'null');if(c&&c.data&&typeof c.data==='object'){teamCache=c;team=c.data}}catch(e){}
+const TEAMPAD=/^(Lorenzo|Stijn|Peter)\/([^/]+)\/visit-[^/]+\.json$/;
+const BEZIG_MS=30*60000;
+function metTimeout(url,opties,ms){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);return fetch(url,Object.assign({},opties,{signal:ctl.signal})).finally(()=>clearTimeout(t))}
+async function haalTeam(){
+  if(teamBezig||!ghToken()||!navigator.onLine)return;teamBezig=true;
+  try{
+    const h={Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json'};if(teamCache.etag)h['If-None-Match']=teamCache.etag;
+    const a=await metTimeout(`https://api.github.com/repos/${GH_REPO}/git/trees/main?recursive=1`,{headers:h,cache:'no-store'},20000);
+    if(a.status===304)return;
+    if(a.status!==200){logSync('team http '+a.status);return}
+    const t=await a.json();if(!t||!Array.isArray(t.tree)||t.truncated)return;
+    const nieuwste={};
+    for(const e of t.tree){if(e.type!=='blob')continue;const m=e.path.match(TEAMPAD);if(!m)continue;const k=m[1]+'/'+m[2];if(!nieuwste[k]||e.path>nieuwste[k].path)nieuwste[k]={path:e.path,sha:e.sha,bezoeker:m[1],slug:m[2]}}
+    const paden={},data={},ophalen=[];
+    for(const k in nieuwste){const n=nieuwste[k];paden[n.path]=n.sha;
+      const oud=teamCache.paden[n.path]===n.sha&&(teamCache.data[n.slug]||[]).find(x=>x&&x.bezoeker===n.bezoeker);
+      if(oud)(data[n.slug]=data[n.slug]||[]).push(oud);else ophalen.push(n)}
+    for(let i=0;i<ophalen.length;i+=6){await Promise.all(ophalen.slice(i,i+6).map(async n=>{try{
+      const b=await metTimeout(`https://api.github.com/repos/${GH_REPO}/git/blobs/${n.sha}`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'},20000);
+      if(b.status!==200)return;const v=JSON.parse(await b.text());if(!v||typeof v!=='object')return;
+      (data[n.slug]=data[n.slug]||[]).push({bezoeker:n.bezoeker,bezocht:!!v.bezocht,bezig_sinds:v.bezig_sinds||null,opgeslagen_om:v.opgeslagen_om||null,updated_at:v.updated_at||null,contact_naam:v.contact_naam||'',notitie:v.notitie||'',heeft_media:!!v.heeft_media,interesse:v.interesse||'',_team:true});
+    }catch(e){}}))}
+    teamCache={etag:a.headers.get('etag')||'',paden,data};team=data;ls('team',JSON.stringify(teamCache));
+    logSync('team '+Object.keys(data).length+' standen, '+ophalen.length+' nieuw, rest '+(a.headers.get('x-ratelimit-remaining')||'?'));
+    try{renderLijst();if($('#plan').classList.contains('actief'))tekenPlan();toonTeamMelding()}catch(e){}
+  }catch(e){logSync('team fout '+(e&&e.message||e))}finally{teamBezig=false}
+}
+// Eén plek die zegt wat een stand is: bezocht (door wie), bezig (collega nam net op), begonnen
+// (er staat al iets in maar niemand sloeg op) of open. Eigen opslag wint van de teamdata.
+function statusVan(slug){
+  const eigen=visits[slug];const tm=(team[slug]||[]).filter(t=>t&&(t.bezoeker!==wie||!eigen));const nu=Date.now();
+  const door=[];if(eigen&&eigen.bezocht)door.push(wie);for(const t of tm)if(t.bezocht&&!door.includes(t.bezoeker))door.push(t.bezoeker);
+  const bezocht=door.length>0;
+  const bz=tm.filter(t=>!t.bezocht&&t.bezoeker!==wie&&t.bezig_sinds&&nu-Date.parse(t.bezig_sinds)<BEZIG_MS);
+  const bezig=!bezocht&&bz.length>0;
+  const inhoud=v=>!!(v&&!v.bezocht&&(v.contact_naam||v.notitie||v.heeft_media||v.contact_email||v.qr_raw));
+  const bg=[];if(inhoud(eigen))bg.push(wie);for(const t of tm)if(inhoud(t)&&!bg.includes(t.bezoeker))bg.push(t.bezoeker);
+  const begonnen=!bezocht&&!bezig&&bg.length>0;
+  const laatst=tm.filter(t=>t.bezocht&&t.opgeslagen_om).map(t=>t.opgeslagen_om).sort().pop()||(eigen&&eigen.bezocht?eigen.opgeslagen_om:null);
+  return{bezocht,door,bezig,doorBezig:bz.map(t=>t.bezoeker),bezigSinds:bz.length?bz[0].bezig_sinds:null,begonnen,doorBegonnen:bg,laatst};
+}
+function uur(iso){try{return new Date(iso).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
+function statusTekst(st){return st.bezocht?'✓ '+st.door.join(', '):st.bezig?'bezig · '+st.doorBezig.join(', '):st.begonnen?'begonnen · '+st.doorBegonnen.join(', '):''}
+function toonTeamMelding(){
+  const el=$('#teammelding');if(!el||!huidig)return;const st=statusVan(huidig.slug);
+  const anderen=st.door.filter(n=>n!==wie);
+  let t='';
+  if(anderen.length)t=`Al bezocht door ${esc(anderen.join(' en '))}${st.laatst?' om '+uur(st.laatst):''}.`;
+  else if(st.bezig)t=`${esc(st.doorBezig.join(' en '))} is hier bezig sinds ${uur(st.bezigSinds)}.`;
+  else if(st.begonnen&&st.doorBegonnen.some(n=>n!==wie))t=`${esc(st.doorBegonnen.filter(n=>n!==wie).join(' en '))} is hier al begonnen, maar heeft niet opgeslagen.`;
+  el.style.display=t?'block':'none';el.innerHTML=t;
+}
 function standSort(s){const m=String(s||'').match(/\d+/);return m?parseInt(m[0],10):999999}
 
 // ── opslag ────────────────────────────────────────────────────────────
@@ -315,7 +378,7 @@ function openDB(){return new Promise((ok,nee)=>{const r=indexedDB.open('bbbeurs'
   r.onsuccess=e=>{db=e.target.result;ok(db)};r.onerror=()=>nee(r.error)})}
 function tx(store,mode,fn){return new Promise((ok,nee)=>{const t=db.transaction(store,mode);const s=t.objectStore(store);const req=fn(s);t.oncomplete=()=>ok(req&&req.result);t.onerror=()=>nee(t.error)})}
 const getVisit=slug=>tx('visits','readonly',s=>s.get(slug));
-const putVisit=v=>tx('visits','readwrite',s=>s.put(v));
+const putVisit=v=>(!v||v._team)?Promise.reject(new Error('teamrecord hoort niet in de eigen opslag')):tx('visits','readwrite',s=>s.put(v));
 const allVisits=()=>tx('visits','readonly',s=>s.getAll());
 const addMedia=m=>tx('media','readwrite',s=>s.add(m));
 const delMedia=id=>tx('media','readwrite',s=>s.delete(id));
@@ -325,7 +388,7 @@ const allMedia=()=>tx('media','readonly',s=>s.getAll());
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 
 // ── toestand ──────────────────────────────────────────────────────────
-let wie=ls('wie'), filter='mijn', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
+let wie=ls('wie'), filter='open', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
 
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('zichtbaar');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('zichtbaar'),2200)}
 function standalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
@@ -335,7 +398,13 @@ function mobiel(){return /iPhone|iPad|Android/i.test(navigator.userAgent)||(navi
 async function start(){
   await openDB();
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+  if('serviceWorker' in navigator){
+    // Herladen zodra een nieuwe versie de pagina overneemt, maar alleen als er al een versie
+    // draaide (anders herlaadt een verse installatie voor niets) en er niets open staat.
+    const had=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!recorder&&!huidig)location.reload()});
+  }
   if(mobiel()&&!standalone()){$('#banner').style.display='block'}
   // Persoonlijke link: .../#wie=Stijn zet de naam één keer, zodat niemand de verkeerde route kiest.
   const hm=location.hash.match(/wie=(Lorenzo|Stijn|Peter)/);if(hm&&!wie){wie=hm[1];ls('wie',wie)}
@@ -350,9 +419,13 @@ async function toonApp(){
   if(ghToken()){telRij().then(()=>synchroniseer())}
   haalPrive();
   haalPitch();
+  haalTeam();
   const terug=ls('huidig');if(terug){const st=STANDEN.find(x=>x.slug===terug);if(st)openStand(st)}
   haalLogosVooraf();
 }
+// Elke 20 s kijken: een 304 (niets nieuws) telt bij GitHub niet mee voor de limiet, dus dat is goedkoop.
+setInterval(()=>{if(wie&&document.visibilityState==='visible')haalTeam()},20000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wie){haalTeam();if(recorder)houdWakker()}});
 // Eén keer alle logo's ophalen terwijl er netwerk is; de service worker bewaart ze.
 async function haalLogosVooraf(){if(!navigator.onLine||ls('logos_'+(window.APP_VERSIE||'')))return;const l=STANDEN.map(s=>s.logo).filter(Boolean);for(let i=0;i<l.length;i+=6){await Promise.all(l.slice(i,i+6).map(u=>fetch(u).catch(()=>{})))}ls('logos_'+(window.APP_VERSIE||''),'1')}
 async function herlaadVisits(){visits={};(await allVisits()).forEach(v=>visits[v.slug]=v)}
@@ -360,9 +433,10 @@ async function herlaadVisits(){visits={};(await allVisits()).forEach(v=>visits[v
 // ── lijst ─────────────────────────────────────────────────────────────
 function zichtbareStanden(){
   const q=zoek.trim().toLowerCase();
+  // Geen vaste zones meer sinds dag 2: Open is alles wat nog niemand deed, van eender wie.
   return STANDEN.filter(s=>{
-    if(filter==='mijn'&&s.bezoeker!==wie)return false;
-    if(filter==='open'&&(s.bezoeker!==wie||(visits[s.slug]&&visits[s.slug].bezocht)))return false;
+    if(filter==='open'){const st=statusVan(s.slug);if(st.bezocht||st.bezig||st.begonnen)return false}
+    if(filter==='mijn'){const st=statusVan(s.slug);if(!(st.door.includes(wie)||st.doorBegonnen.includes(wie)))return false}
     if(q&&!(s.naam.toLowerCase().includes(q)||String(s.stand).toLowerCase().includes(q)))return false;
     return true;
   });
@@ -370,15 +444,16 @@ function zichtbareStanden(){
 function renderLijst(){
   toonVeilig();
   const lijst=zichtbareStanden();
-  const mijn=STANDEN.filter(s=>s.bezoeker===wie);const gedaan=mijn.filter(s=>visits[s.slug]&&visits[s.slug].bezocht).length;
-  $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)}</span>${gedaan}/${mijn.length} bezocht`;
+  let teamGedaan=0,mijnGedaan=0;for(const s of STANDEN){const st=statusVan(s.slug);if(st.bezocht)teamGedaan++;if(st.door.includes(wie))mijnGedaan++}
+  $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)}</span>Team ${teamGedaan}/${STANDEN.length} · jij ${mijnGedaan}`;
   const el=$('#rijen');el.innerHTML='';
   if(!lijst.length){el.innerHTML='<div class="leeg">Niets gevonden.</div>';return}
   for(const s of lijst){
-    const v=visits[s.slug];const b=document.createElement('button');
-    b.className='rij'+(s.prio==='A'?' a':'')+(v&&v.bezocht?' bezocht':'')+(huidig&&huidig.slug===s.slug?' huidig':'');
+    const st=statusVan(s.slug);const b=document.createElement('button');
+    b.className='rij'+(s.prio==='A'?' a':'')+(st.bezocht?' bezocht':'')+(huidig&&huidig.slug===s.slug?' huidig':'');
     const tegel=s.logo?`<span class="tegel metlogo"><img src="${esc(s.logo)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('metlogo');this.parentNode.textContent='${esc(s.stand)}'"></span>`:`<span class="tegel">${esc(s.stand)}</span>`;
-    b.innerHTML=`${tegel}<span class="naam">${esc(s.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(s.stand)}</span> · ${esc(kortBeurs(s.beurs))}${s.bezoeker!==wie?' · '+esc(s.bezoeker):''}${s.prio?' · <span class="badge">'+esc(s.prio)+'</span>':''}</span></span><span class="vink">${v&&v.bezocht?'✓':''}</span>`;
+    const stat=statusTekst(st);
+    b.innerHTML=`${tegel}<span class="naam">${esc(s.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(s.stand)}</span> · ${esc(kortBeurs(s.beurs))}${stat?' · <span class="stat">'+esc(stat)+'</span>':''}${s.prio?' · <span class="badge">'+esc(s.prio)+'</span>':''}</span></span><span class="vink">${st.bezocht?'✓':''}</span>`;
     b.onclick=()=>openStand(s);el.appendChild(b);
   }
 }
@@ -402,11 +477,11 @@ async function openStand(s){
 }
 function renderStand(){
   const s=huidig,v=opname;
-  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const idx=mijn.findIndex(x=>x.slug===s.slug);
-  $('#standtitel').textContent=s.naam;$('#standteller').textContent=idx>=0?`${idx+1}/${mijn.length}`:'';
+  $('#standtitel').textContent=s.naam;
   $('#voet').style.display='block';
   const el=$('#standinhoud');
   el.innerHTML=`
+  <div id="teammelding" class="waarsch" style="display:none"></div>
   <div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(s.stand)}</span> ${s.prio?'<span class="badge">prio '+esc(s.prio)+'</span>':''}
     <h2>${esc(s.naam)}</h2></div>${s.logo?'<div class="logo"><img src="'+esc(s.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div><div class="meta">${esc(s.beurs)}${s.gemeente?' · '+esc(s.gemeente):''}${s.categorie?' · '+esc(s.categorie):''}</div>
     ${s.wat_ze_doen?'<div class="doen">'+esc(s.wat_ze_doen)+'</div>':''}
@@ -449,7 +524,7 @@ function renderStand(){
   <div class="blok"><h2>Notitie</h2>
     <textarea class="veld" id="notitie" placeholder="Kort: wat speelt er, wie beslist, volgende stap">${esc(v.notitie)}</textarea>
   </div>`;
-  el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=()=>{v.opname=b.dataset.op;ls('opname_'+wie,v.opname);herteken();bewaarConcept()});
+  el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=()=>{if(recorder){toast('Stop eerst de opname');return}v.opname=b.dataset.op;ls('opname_'+wie,v.opname);herteken();bewaarConcept()});
   el.querySelectorAll('#interesse .pil').forEach(b=>b.onclick=()=>{v.interesse=b.dataset.i;el.querySelectorAll('#interesse .pil').forEach(p=>p.classList.remove('aan'));b.classList.add('aan');bewaarConcept()});
   el.oninput=bewaarConcept;
   const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
@@ -457,7 +532,7 @@ function renderStand(){
   $('#btnVoice').onclick=()=>toggleRec('voicenote',$('#btnVoice'));
   $('#btnScan').onclick=startScan;
   $('#foto').onchange=e=>fotoKaartje(e.target.files[0]);
-  renderMedia();
+  renderMedia();toonTeamMelding();
 }
 // Elke hertekening leest eerst wat er op het scherm staat. Zonder dit wiste een klik op
 // een opnameknop of opnamekeuze alles wat getypt of gescand was maar nog niet opgeslagen.
@@ -471,7 +546,7 @@ function renderMedia(){
   for(const m of mediaLijst){
     const d=document.createElement('div');d.className='item';
     if(m.soort==='kaartje'){const url=URL.createObjectURL(m.blob);d.innerHTML=`<img src="${url}" alt="kaartje"><span>kaartje</span>`;f.appendChild(d)}
-    else{const url=URL.createObjectURL(m.blob);d.innerHTML=`<span>${m.soort==='gesprek'?'Gesprek':'Voicenote'} · ${fmt(m.duur_s)}</span><audio controls src="${url}" style="height:32px;max-width:160px"></audio>`;a.appendChild(d)}
+    else{const url=URL.createObjectURL(m.blob);const kort=m.klok_s&&m.klok_s-m.duur_s>15;d.innerHTML=`<span>${m.soort==='gesprek'?'Gesprek':'Voicenote'} · ${kort?'<b style="color:var(--zalm-d)">onderbroken: '+fmt(m.duur_s)+' van '+fmt(m.klok_s)+'</b>':fmt(m.duur_s)}</span><audio controls src="${url}" style="height:32px;max-width:160px"></audio>`;a.appendChild(d)}
     const x=document.createElement('button');x.textContent='✕';x.title='Verwijder';x.onclick=async()=>{if(confirm('Dit bestand verwijderen?')){await delMedia(m.id);mediaLijst=mediaLijst.filter(z=>z.id!==m.id);renderMedia()}};d.appendChild(x);
   }
 }
@@ -479,26 +554,55 @@ function fmt(s){s=Math.round(s||0);return `${Math.floor(s/60)}:${String(s%60).pa
 
 // ── opnemen ───────────────────────────────────────────────────────────
 function mime(){for(const t of ['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg']){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t}return ''}
+// Dag 1 leerde: zodra het scherm vergrendelt, stopt de microfoon. iOS gaf 2:00 audio bij 4:04 klok,
+// Android stilte na 35 s. Een webapp kan niet opnemen met een vergrendeld scherm, dus de app
+// houdt het scherm wakker zolang er opgenomen wordt, meet achteraf de echte audioduur, en stopt
+// netjes (met wat er is) zodra de microfoon toch wegvalt, zodat een tik op Gesprek deel 2 start.
+let wakeLock=null;
+async function houdWakker(){try{if('wakeLock' in navigator&&!wakeLock&&document.visibilityState==='visible'){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}}catch(e){wakeLock=null}}
+function laatSlapen(){try{if(wakeLock){wakeLock.release();wakeLock=null}}catch(e){}}
+function audioDuur(blob){return new Promise(ok=>{let klaar=false;const a=document.createElement('audio');const done=d=>{if(klaar)return;klaar=true;try{URL.revokeObjectURL(a.src)}catch(e){}ok(d)};try{a.preload='metadata';a.onloadedmetadata=()=>done(a.duration);a.onerror=()=>done(NaN);setTimeout(()=>done(NaN),2000);a.src=URL.createObjectURL(blob)}catch(e){done(NaN)}})}
 async function toggleRec(soort,btn){
   if(recorder){stopRec();return}
   if(!window.MediaRecorder){toast('Opnemen kan niet in deze browser');return}
-  try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Geen toegang tot de microfoon');return}
-  const t=mime();recChunks=[];recSoort=soort;recorder=new MediaRecorder(stream,t?{mimeType:t}:undefined);
-  recorder.ondataavailable=e=>{if(e.data&&e.data.size)recChunks.push(e.data)};
-  recorder.onstop=async()=>{
-    const type=recorder.mimeType||t||'audio/mp4';const blob=new Blob(recChunks,{type});const duur=(Date.now()-recStart)/1000;
-    stream.getTracks().forEach(x=>x.stop());stream=null;recorder=null;clearInterval(recTimer);
+  let eigenStream;try{eigenStream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Geen toegang tot de microfoon');return}
+  stream=eigenStream;
+  const t=mime();const chunks=[];recSoort=soort;const rec=new MediaRecorder(eigenStream,t?{mimeType:t}:undefined);recorder=rec;
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  // Microfoon weg (vergrendeld, camera, telefoontje): het stuk dat er is bewaren en dat zeggen.
+  let muteTimer=null,onderbroken=false;
+  const valWeg=()=>{if(rec.state==='inactive'||onderbroken)return;onderbroken=true;stopRec();toast('Opname onderbroken: tik opnieuw op '+(soort==='gesprek'?'Gesprek':'Voicenote'))};
+  const track=eigenStream.getAudioTracks()[0];
+  if(track){track.onended=valWeg;track.onmute=()=>{clearTimeout(muteTimer);muteTimer=setTimeout(()=>{if(track.muted)valWeg()},3000)};track.onunmute=()=>clearTimeout(muteTimer)}
+  rec.onerror=valWeg;
+  rec.onstop=async()=>{
+    clearTimeout(muteTimer);
+    const type=rec.mimeType||t||'audio/mp4';const blob=new Blob(chunks,{type});const klok=(Date.now()-recStart)/1000;
+    eigenStream.getTracks().forEach(x=>x.stop());if(stream===eigenStream)stream=null;if(recorder===rec)recorder=null;clearInterval(recTimer);laatSlapen();
     if(blob.size<1000){toast('Opname te kort');herteken();return}
-    const m={slug:huidig.slug,soort,blob,mime:type,duur_s:duur,created:new Date().toISOString()};
-    m.id=await addMedia(m);mediaLijst.push(m);opname.heeft_media=true;if(ghToken())telRij();
+    let duur=await audioDuur(blob);if(!isFinite(duur)||duur<=0)duur=klok;
+    const m={slug:huidig.slug,soort,blob,mime:type,duur_s:duur,klok_s:klok,created:new Date().toISOString()};
+    m.id=await addMedia(m);mediaLijst.push(m);opname.heeft_media=true;
+    if(soort==='gesprek'&&opname.bezig_sinds)opname.bezig_sinds=new Date().toISOString();
     if(opname.opname==='plaud'){opname.opname='telefoon';ls('opname_'+wie,'telefoon')}
-    herteken();bewaarConcept();toast('Opname bewaard');
+    herteken();bewaarConcept();if(ghToken())telRij();
+    toast(onderbroken?'Bewaard tot de onderbreking · '+fmt(duur):'Opname bewaard');
   };
-  recorder.start(1000);recStart=Date.now();
+  rec.start(1000);recStart=Date.now();houdWakker();
   const ander=soort==='gesprek'?$('#btnVoice'):$('#btnGesprek');ander.disabled=true;
   btn.classList.add('opneemt');
   recTimer=setInterval(()=>{const s=(Date.now()-recStart)/1000;btn.innerHTML=`<span class="punt"></span> Stop · ${fmt(s)}`;if(s>20*60)stopRec()},500);
   btn.innerHTML='<span class="punt"></span> Stop · 0:00';
+  if(soort==='gesprek'){opname.bezig_sinds=opname.updated_at=new Date().toISOString();try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}stuurBezig(opname)}
+}
+// Het bezig-signaal gaat meteen en buiten de wachtrij om, anders wacht het op een opname van 3 MB
+// die net aan het uploaden is. Eén kleine call; lukt hij niet, dan neemt de gewone wachtrij het over.
+async function stuurBezig(v){
+  if(!ghToken()||!navigator.onLine||!v||!v.updated_at)return;
+  try{const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;
+    await ghPut(`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
+    const vers=await getVisit(v.slug);if(vers&&vers.updated_at===v.updated_at){vers.sync_at=v.updated_at;await putVisit(vers);visits[v.slug]=vers;if(opname&&opname.slug===v.slug)opname.sync_at=v.updated_at}
+  }catch(e){logSync('bezig later via de rij: '+(e&&e.message||e))}
 }
 function stopRec(){if(recorder&&recorder.state!=='inactive')recorder.stop()}
 
@@ -562,14 +666,14 @@ $('#btnOpslaan').onclick=async()=>{
   leesVelden();const v=opname;
   if(!v.opname){toast('Kies: Telefoon, Plaud of Geen opname');return}
   if(v.opname==='plaud'&&!confirm('Plaud-opname gestopt?'))return;
-  v.bezocht=true;v.opgeslagen_om=new Date().toISOString();v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
+  v.bezocht=true;v.bezig_sinds=null;v.opgeslagen_om=new Date().toISOString();v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
   await putVisit(v);visits[v.slug]=v;
-  toast('Bewaard');if(ghToken()){await telRij();synchroniseer()}
-  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const idx=mijn.findIndex(x=>x.slug===huidig.slug);
-  const volgende=mijn.slice(idx+1).concat(mijn.slice(0,idx)).find(x=>!(visits[x.slug]&&visits[x.slug].bezocht));
-  if(volgende){openStand(volgende)}else{huidig=null;ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');$('#standinhoud').innerHTML='<div class="leeg">Alles bezocht. Vergeet niet te versturen.</div>';$('#voet').style.display='none';renderLijst()}
+  toast('Bewaard');if(ghToken()){telRij().then(()=>synchroniseer())}
+  // Geen vaste route meer: na het opslaan toont het grondplan wat rondom nog open is.
+  const slug=huidig.slug;huidig=null;ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');$('#standinhoud').innerHTML='<div class="leeg">Kies een stand in de lijst of op het grondplan.</div>';$('#voet').style.display='none';renderLijst();
+  if(PLAN&&PLAN.bron&&PLAN.bron[slug])openPlan(null,slug);else{toast('Bewaard. Deze stand staat niet op het grondplan');openPlan(null)}
 };
-$('#btnTerug').onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}if(huidig&&$('#cNaam')){leesVelden();try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}}ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst()};
+$('#btnTerug').onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}if(huidig&&$('#cNaam')){leesVelden();if(opname.bezig_sinds){opname.bezig_sinds=null;opname.updated_at=new Date().toISOString()}try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}}ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();haalTeam()};
 window.addEventListener('pagehide',()=>{if(huidig&&opname){try{leesVelden();putVisit(opname)}catch(e){}}});
 
 // ── back-up naar een private GitHub-repo ───────────────────────────────
@@ -583,15 +687,20 @@ const veilig=t=>String(t||'').replace(/[^A-Za-z0-9._-]/g,'-');
 const b64tekst=t=>btoa(unescape(encodeURIComponent(t)));
 const b64blob=b=>new Promise((ok,nee)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=()=>nee(r.error);r.readAsDataURL(b)});
 async function ghPut(pad,inhoud){
-  let laatste='';
+  let laatste='';const url=`https://api.github.com/repos/${GH_REPO}/contents/${pad.split('/').map(encodeURIComponent).join('/')}`;
   for(let poging=1;poging<=4;poging++){
-    let a;try{a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${pad.split('/').map(encodeURIComponent).join('/')}`,{method:'PUT',headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'backup '+pad.split('/')[0],content:inhoud})})}catch(e){throw new Error('netwerk')}
-    if(a.status===201||a.status===200){logSync('ok '+pad.split('/').slice(1).join('/'));return true}
+    // Time-out, anders blijft een hangende upload op hal-wifi de hele back-up blokkeren.
+    let a;try{a=await metTimeout(url,{method:'PUT',headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'backup '+pad.split('/')[0],content:inhoud})},inhoud.length>200000?90000:20000)}catch(e){throw new Error('netwerk')}
+    const rest=a.headers.get('x-ratelimit-remaining');
+    if(a.status===201||a.status===200){logSync('ok '+pad.split('/').slice(1).join('/')+(rest?' · rest '+rest:''));return true}
     if(a.status===422){ // kan 'bestaat al' zijn, maar ook een afgekeurd verzoek: alleen geloven als het bestand er staat
-      const c=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${pad.split('/').map(encodeURIComponent).join('/')}`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json'}}).catch(()=>null);
+      const c=await metTimeout(url,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github+json'}},20000).catch(()=>null);
       if(c&&c.status===200){logSync('stond er al '+pad.split('/').pop());return true}
       logSync('422 geweigerd '+pad.split('/').pop());throw new Error('geweigerd door GitHub (422)')}
-    logSync('http '+a.status+' poging '+poging+' '+pad.split('/').pop());
+    logSync('http '+a.status+' poging '+poging+' '+pad.split('/').pop()+(rest?' · rest '+rest:''));
+    // Drie toestellen delen één sleutel, dus één limiet. Even wachten is dan juist; 'sleutel' niet.
+    const retry=a.headers.get('retry-after');
+    if((a.status===403||a.status===429)&&(retry||rest==='0')){const s=Math.min(parseInt(retry||'60',10)||60,120);await new Promise(r=>setTimeout(r,s*1000));laatste='wacht';continue}
     if(a.status===401||a.status===403||a.status===404)throw new Error('sleutel');
     laatste='http '+a.status;await new Promise(r=>setTimeout(r,600*poging+Math.random()*500)); // 409: een collega schreef net tegelijk
   }
@@ -602,7 +711,7 @@ let syncBezig=false,syncStatus={op:'',fout:'',wacht:0,geteld:false};const syncLo
 function logSync(t){syncLog.push(new Date().toLocaleTimeString('nl-BE')+' '+t);if(syncLog.length>40)syncLog.shift()}
 async function telRij(){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.geteld=true;toonVeilig();return q}
 async function wachtrij(){
-  const vs=(await allVisits()).filter(v=>v.bezoeker===wie&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media)&&v.sync_at!==v.updated_at);
+  const vs=(await allVisits()).filter(v=>v.updated_at&&v.bezoeker===wie&&!v._team&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media||v.bezig_sinds)&&v.sync_at!==v.updated_at);
   const slugs=new Set((await allVisits()).filter(v=>v.bezoeker===wie).map(v=>v.slug));
   const ms=(await allMedia()).filter(m=>slugs.has(m.slug)&&!m.sync);
   return{vs,ms};
@@ -631,7 +740,7 @@ async function koppelBackup(tekst){
   }catch(e){toast('Sleutel bewaard. Controle volgt zodra er netwerk is.');toonVeilig();return true}
   toast('Back-up gekoppeld');toonVeilig();synchroniseer();haalPrive();haalPitch();return true;
 }
-window.addEventListener('online',()=>synchroniseer());
+window.addEventListener('online',()=>{synchroniseer();haalTeam()});
 if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sync:()=>synchroniseer(),teken:()=>tekenNu(),view:()=>view};
 setInterval(()=>synchroniseer(),45000);
 
@@ -640,9 +749,12 @@ function nietVerstuurd(){const sinds=ls('laatst_verstuurd')||'';return Object.va
 function toonVeilig(){
   const knop=$('#btnExport');const bol=$('#bol');const blok=$('#veilig');if(!knop)return;
   if(ghToken()){
-    const w=syncStatus.wacht;bol.textContent=w;knop.classList.toggle('open',w>0);knop.classList.toggle('dringend',w>=5||!!(w&&syncStatus.fout&&syncStatus.fout!=='geen netwerk'));
-    if(syncStatus.fout&&syncStatus.fout!=='geen netwerk'){blok.innerHTML=`<b>Back-up lukt niet: ${esc(syncStatus.fout)}.</b>${w} ${w===1?'item wacht':'items wachten'}. Tik op Verstuur om een zip te sturen, en meld dit aan Lorenzo.`;blok.classList.add('toon')}
-    else if(w>0||syncBezig||!syncStatus.geteld){blok.innerHTML=`<b>${syncBezig?'Back-up bezig':'Back-up'}${w?': '+w+(w===1?' item wacht':' items wachten'):''}.</b>${syncStatus.fout==='geen netwerk'?'Geen netwerk. De app probeert het vanzelf opnieuw.':'Wordt doorgestuurd.'}`;blok.classList.add('toon')}
+    // Een 409 (collega schreef net tegelijk), een 5xx of een limiet is geen fout van de sleutel: de
+    // volgende ronde lost dat op. Alleen een echt geweigerde sleutel of een 422 is rood.
+    const zacht=!syncStatus.fout||syncStatus.fout==='geen netwerk'||syncStatus.fout==='wacht'||syncStatus.fout==='netwerk'||/^http (409|5\d\d)$/.test(syncStatus.fout);
+    const w=syncStatus.wacht;bol.textContent=w;knop.classList.toggle('open',w>0);knop.classList.toggle('dringend',w>=5||!!(w&&!zacht));
+    if(!zacht){blok.innerHTML=`<b>Back-up lukt niet: ${esc(syncStatus.fout)}.</b>${w} ${w===1?'item wacht':'items wachten'}. Tik op Verstuur om een zip te sturen, en meld dit aan Lorenzo.`;blok.classList.add('toon')}
+    else if(w>0||syncBezig||!syncStatus.geteld){blok.innerHTML=`<b>${syncBezig?'Back-up bezig':'Back-up'}${w?': '+w+(w===1?' item wacht':' items wachten'):''}.</b>${syncStatus.fout==='geen netwerk'?'Geen netwerk. De app probeert het vanzelf opnieuw.':syncStatus.fout?'Wacht even en probeert vanzelf opnieuw.':'Wordt doorgestuurd.'}`;blok.classList.add('toon')}
     else{const t=syncStatus.op?new Date(syncStatus.op).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'}):'';blok.innerHTML=`<b>✓ Alles staat veilig in de back-up${t?' · '+t:''}.</b>`;blok.classList.add('toon');blok.style.borderLeftColor='var(--groen)'}
     if(w>0||syncStatus.fout||syncBezig||!syncStatus.geteld)blok.style.borderLeftColor='';
     return}
@@ -664,12 +776,12 @@ function collegaKlasse(naam){const rest=COLLEGAS.filter(x=>x!==wie);const i=rest
 function standKlasse(st,nuSlug){
   const ss=st.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return 'leeg';
   if(nuSlug&&st.slugs.includes(nuSlug))return 's nu';
-  const gedaan=ss.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
-  const mijn=ss.some(x=>x.bezoeker===wie);
+  const sts=ss.map(x=>statusVan(x.slug));const gedaan=sts.filter(s=>s.bezocht).length;
   if(gedaan===ss.length)return 's klaar';
   if(gedaan>0)return 's deels';
-  if(ss.some(x=>{const v=visits[x.slug];return v&&!v.bezocht&&(v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media)}))return 's bezig';
-  return mijn?'s mijn':'s '+collegaKlasse(ss[0].bezoeker);
+  if(sts.some(s=>s.bezig))return 's bezig';
+  if(sts.some(s=>s.begonnen))return 's begonnen';
+  return 's open';
 }
 // ── grondplan op canvas ──
 // Een SVG met 500 vormen en 200 teksten herberekent op een iPhone bij elke beweging, ook met
@@ -684,7 +796,7 @@ function planInit(){if(!PLAN||PLAN._ok)return;PLAN._ok=true;
   PLAN.achtergrond.forEach(a=>{if(a.k==='zone')a.gang=Math.min(a.b.w,a.b.h)<45&&Math.max(a.b.w,a.b.h)>300});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(tekenPlan);
 }
-const STIJL={'s mijn':['#ffffff','#14171c',2.5],'s c1':['#e2e8ee','#93a1ae',2],'s c2':['#efe6d9','#b3a48d',2],'s c0':['#e8e8e8','#9a9a9a',2],'s deels':['#fde3df','#f37262',2.5],'s bezig':['#fdd9d3','#f37262',2.5],'s klaar':['#77b978','#4f9a52',2.5],'s nu':['#fa8072','#14171c',4.5],'leeg':['#efeeea','#dddcd6',1.5]};
+const STIJL={'s open':['#ffffff','#14171c',2.5],'s mijn':['#ffffff','#14171c',2.5],'s c1':['#e2e8ee','#93a1ae',2],'s c2':['#efe6d9','#b3a48d',2],'s c0':['#e8e8e8','#9a9a9a',2],'s deels':['#fde3df','#f37262',2.5],'s begonnen':['#fde3df','#f37262',2.5],'s bezig':['#fdd9d3','#f37262',3.5],'s klaar':['#77b978','#4f9a52',2.5],'s nu':['#fa8072','#14171c',4.5],'leeg':['#efeeea','#dddcd6',1.5]};
 function rondeRechthoek(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function logoVan(src){let im=logoCache[src];if(!im){im=logoCache[src]=new Image();im.onload=()=>tekenPlan();im.src=src}return im.complete&&im.naturalWidth?im:null}
 function tekenPlan(){if(planRaf||!PLAN)return;planRaf=requestAnimationFrame(()=>{planRaf=0;tekenNu()})}
@@ -714,43 +826,47 @@ function tekenNu(){
   // onze standen
   const dicht=r.width/view.k<820;const klein=13*view.k<6.5;
   PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=standKlasse(s0,planNu);s0._k=kl;st=STIJL[kl]||STIJL.leeg;ctx.fillStyle=st[0];ctx.strokeStyle=st[1];ctx.lineWidth=st[2];
-    if(kl==='s bezig')ctx.setLineDash([7,4]);ctx.fill(s0.p);ctx.stroke(s0.p);ctx.setLineDash([]);
+    if(kl==='s bezig'||kl==='s begonnen')ctx.setLineDash([7,4]);ctx.fill(s0.p);ctx.stroke(s0.p);ctx.setLineDash([]);
     if(i===planGekozen){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(s0.p)}});
   PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=s0._k;const ss=s0.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return;const b=s0.b;const eerste=ss[0];
-    const klaar=kl==='s klaar';const gedaan=ss.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
+    const klaar=kl==='s klaar';const gedaan=ss.filter(x=>statusVan(x.slug).bezocht).length;
     let ty=s0.cy;
     if(dicht&&!s0.zone&&!klaar&&eerste.logo&&Math.min(b.w,b.h)>=34){const im=logoVan(eerste.logo);if(im){const m=Math.min(Math.min(b.w,b.h)*0.62,70);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,s0.cx-w/2,s0.cy-7-h/2,w,h);ty=s0.cy+Math.min(b.w,b.h)*0.31+4}}
     if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',s0.cx,s0.cy+1)}
-    else if(!klein){const ander=/ c\d/.test(kl);ctx.font=`${ander?500:700} 13px 'League Spartan',sans-serif`;ctx.fillStyle=ander?'#6f7880':'#14171c';ctx.fillText(s0.zone?`${gedaan}/${ss.length}`:String(eerste.stand).split('|')[0].trim(),s0.cx,ty+1)}
-    if(kl==='s mijn'&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}});
-  const mijn=STANDEN.filter(x=>x.bezoeker===wie);const af=mijn.filter(x=>visits[x.slug]&&visits[x.slug].bezocht).length;
-  $('#planteller').textContent=`${af}/${mijn.length} bezocht`;
+    else if(!klein){ctx.font="700 13px 'League Spartan',sans-serif";ctx.fillStyle='#14171c';ctx.fillText(s0.zone?`${gedaan}/${ss.length}`:String(eerste.stand).split('|')[0].trim(),s0.cx,ty+1)}
+    if(!klaar&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}});
+  let af=0;for(const x of STANDEN)if(statusVan(x.slug).bezocht)af++;
+  $('#planteller').textContent=`Team ${af}/${STANDEN.length}`;
 }
-function zetLegende(){const rest=COLLEGAS.filter(x=>x!==wie);$('#legende').innerHTML=`<span><i class="l mijn"></i>${esc(wie)}</span><span><i class="l c1"></i>${esc(rest[0])}</span><span><i class="l c2"></i>${esc(rest[1])}</span><span><i class="l bezig"></i>begonnen</span><span><i class="l klaar"></i>bezocht</span><span><i class="l pa"></i>prio A</span>`}
+function zetLegende(){$('#legende').innerHTML=`<span><i class="l open"></i>open</span><span><i class="l bezig"></i>bezig</span><span><i class="l begonnen"></i>begonnen</span><span><i class="l deels"></i>deels</span><span><i class="l klaar"></i>bezocht</span><span><i class="l pa"></i>prio A</span>`}
 function pasIn(x0,y0,x1,y1,marge){const r=$('#planvlak').getBoundingClientRect();const w=(x1-x0)+marge*2,h=(y1-y0)+marge*2;const k=Math.min(r.width/w,r.height/h);view={k,x:(x0+x1)/2-r.width/k/2,y:(y0+y1)/2-r.height/k/2};tekenPlan()}
 function zoneVan(filter){planInit();let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;PLAN.standen.forEach(st=>{if(!st.slugs.some(filter))return;x0=Math.min(x0,st.b.x0);y0=Math.min(y0,st.b.y0);x1=Math.max(x1,st.b.x1);y1=Math.max(y1,st.b.y1)});return x0<1e9?[x0,y0,x1,y1]:null}
-function openPlan(nuSlug){
+// nuSlug: de stand die als 'nu' oplicht. focus: alleen op die stand inzoomen, bijvoorbeeld net na Opslaan.
+function openPlan(nuSlug,focus){
   if(!PLAN){toast('Geen grondplan beschikbaar');return}
   if($('#cNaam')&&huidig){leesVelden();putVisit(opname).catch(()=>{})}
-  planNu=nuSlug||null;planGekozen=-1;$('#plan').classList.add('actief');$('#planblad').classList.remove('actief');zetLegende();planInit();
-  requestAnimationFrame(()=>{const z=nuSlug?zoneVan(x=>x===nuSlug):null;const mz=zoneVan(x=>perSlug[x]&&perSlug[x].bezoeker===wie);if(z)pasIn(z[0],z[1],z[2],z[3],180);else if(mz)pasIn(mz[0],mz[1],mz[2],mz[3],60);else pasIn(0,0,PLAN.w,PLAN.h,20);if(!planKlaar){koppelPlan();planKlaar=true}});
+  planNu=nuSlug||null;planGekozen=-1;$('#plan').classList.add('actief');$('#planblad').classList.remove('actief');zetLegende();planInit();haalTeam();
+  requestAnimationFrame(()=>{const doel=focus||nuSlug;const z=doel?zoneVan(x=>x===doel):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else pasIn(0,0,PLAN.w,PLAN.h,20);if(!planKlaar){koppelPlan();planKlaar=true}});
 }
 function sluitPlan(){$('#plan').classList.remove('actief')}
-function infoKaart(x){const v=visits[x.slug];const klaar=v&&v.bezocht;
+function infoKaart(x){const v=visits[x.slug];const st=statusVan(x.slug);const klaar=st.bezocht;
+  const tm=(team[x.slug]||[]).find(t=>t&&t.bezocht&&t.contact_naam);const naam=v&&v.contact_naam?v.contact_naam+(v.contact_functie?' ('+v.contact_functie+')':''):tm?tm.contact_naam:'';
+  const status=klaar?'✓ bezocht door '+st.door.join(', '):st.bezig?'bezig · '+st.doorBezig.join(', '):st.begonnen?'begonnen · '+st.doorBegonnen.join(', '):'open';
   return `<div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(x.stand)}</span> ${x.prio?'<span class="badge">prio '+esc(x.prio)+'</span>':''}<h2>${esc(x.naam)}</h2></div>${x.logo?'<div class="logo"><img src="'+esc(x.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div>
     <div class="meta">${esc(kortBeurs(x.beurs))}${x.gemeente?' · '+esc(x.gemeente):''}${x.categorie?' · '+esc(x.categorie):''}</div>
     ${x.wat_ze_doen?'<div class="doen">'+esc(x.wat_ze_doen)+'</div>':''}
-    ${v&&v.contact_naam?'<div class="doen"><b>Gesproken met:</b> '+esc(v.contact_naam)+(v.contact_functie?' ('+esc(v.contact_functie)+')':'')+'</div>':''}
-    <span class="status ${klaar?'ok':''}">${klaar?'✓ bezocht':'nog te doen'} · ${esc(x.bezoeker)}${x.spoor?' · '+esc(x.spoor):''}</span>
+    ${naam?'<div class="doen"><b>Gesproken met:</b> '+esc(naam)+'</div>':''}
+    <span class="status ${klaar?'ok':''}">${esc(status)}${x.spoor?' · '+esc(x.spoor):''}</span>
     <div class="acties"><button class="knop open" data-open="${esc(x.slug)}">${klaar?'Bezoek bekijken':'Bezoek starten'}</button><button class="knop dicht" data-dicht="1">Sluit</button></div></div>`}
 function toonBlad(st,i){const ss=st.slugs.map(x=>perSlug[x]).filter(Boolean);const b=$('#planblad');if(!ss.length){b.classList.remove('actief');return}
   let h='<div class="greep"></div>';
   if(ss.length<=3){if(ss.length>1)h+=`<h3>Gedeelde stand · ${ss.length} bedrijven</h3>`;h+=ss.map(infoKaart).join('')}
   else{h+=`<h3>${st.zone?'Zone':'Stand'} · ${ss.length} bedrijven · tik voor de info</h3><div id="bladlijst"></div>`}
   b.innerHTML=h;
-  if(ss.length>3){const l=$('#bladlijst');for(const x of ss){const v=visits[x.slug];const k=document.createElement('button');k.className='rij'+(v&&v.bezocht?' bezocht':'');
+  if(ss.length>3){const l=$('#bladlijst');for(const x of ss){const st=statusVan(x.slug);const k=document.createElement('button');k.className='rij'+(st.bezocht?' bezocht':'');
     const tegel=x.logo?`<span class="tegel metlogo"><img src="${esc(x.logo)}" alt=""></span>`:`<span class="tegel">${esc(x.stand)}</span>`;
-    k.innerHTML=`${tegel}<span class="naam">${esc(x.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(x.stand)}</span> · ${esc(x.bezoeker)}</span></span><span class="vink">${v&&v.bezocht?'✓':''}</span>`;
+    const stat=statusTekst(st);
+    k.innerHTML=`${tegel}<span class="naam">${esc(x.naam)}<br><span class="beurs"><span class="nr">Stand ${esc(x.stand)}</span>${stat?' · <span class="stat">'+esc(stat)+'</span>':' · open'}</span></span><span class="vink">${st.bezocht?'✓':''}</span>`;
     k.onclick=()=>{b.innerHTML='<div class="greep"></div>'+infoKaart(x);koppelBlad()};l.appendChild(k)}}
   koppelBlad();b.classList.add('actief');b.scrollTop=0;planGekozen=i;tekenPlan();
 }
@@ -781,7 +897,8 @@ $('#btnPitchDicht').onclick=()=>$('#pitch').classList.remove('actief');
 $('#btnZoomIn').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(0.7,r.left+r.width/2,r.top+r.height/2)};
 $('#btnZoomUit').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(1.4,r.left+r.width/2,r.top+r.height/2)};
 $('#btnPlanAlles').onclick=()=>pasIn(0,0,PLAN.w,PLAN.h,20);
-$('#btnPlanMijn').onclick=()=>{const z=zoneVan(x=>perSlug[x]&&perSlug[x].bezoeker===wie);if(z)pasIn(z[0],z[1],z[2],z[3],60)};
+// Laatste: de stand die je zelf het laatst opsloeg, zodat je ziet wat daar rond nog open is.
+$('#btnPlanMijn').onclick=()=>{let l=null;for(const v of Object.values(visits)){if(v.bezoeker===wie&&v.bezocht&&v.opgeslagen_om&&(!l||v.opgeslagen_om>l.opgeslagen_om))l=v}const z=l?zoneVan(x=>x===l.slug):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else{toast('Nog niets opgeslagen');pasIn(0,0,PLAN.w,PLAN.h,20)}};
 
 // ── versturen ─────────────────────────────────────────────────────────
 $('#btnExport').onclick=async()=>{
@@ -814,9 +931,13 @@ $('#btnExport').onclick=async()=>{
 
 // ── meer: wie, wissen ─────────────────────────────────────────────────
 $('#btnMeer').onclick=async()=>{
-  const k=prompt(`Ingelogd als ${wie}.\n\nTyp:\n  naam  = andere naam kiezen\n  koppel = back-up koppelen (sleutel plakken)\n  zip   = een zip maken en delen\n  wis   = alle gegevens op dit toestel wissen\n  info  = versie en aantal\n  log   = de laatste verzendingen naar de back-up`);
+  const k=prompt(`Ingelogd als ${wie}.\n\nTyp:\n  naam  = andere naam kiezen\n  koppel = back-up koppelen (sleutel plakken)\n  zip   = een zip maken en delen\n  vernieuw = de nieuwste versie van de app ophalen\n  wis   = alle gegevens op dit toestel wissen\n  info  = versie en aantal\n  log   = de laatste verzendingen naar de back-up`);
   if(!k)return;
   if(k.trim().toLowerCase()==='log'){alert(syncLog.length?syncLog.slice(-15).join('\n'):'Nog niets verstuurd in deze sessie.');return}
+  if(k.trim().toLowerCase()==='vernieuw'){ // de reddingsboei als een toestel op een oude versie blijft hangen; raakt de opslag niet
+    if(recorder){toast('Stop eerst de opname');return}if(!navigator.onLine){toast('Geen netwerk');return}
+    try{const ks=await caches.keys();await Promise.all(ks.map(x=>caches.delete(x)));const r=await navigator.serviceWorker.getRegistration();if(r)await r.update()}catch(e){}
+    location.reload();return}
   if(k.trim().toLowerCase()==='koppel'){const t=prompt('Plak hier de sleutel');if(t)koppelBackup(t);return}
   if(k.trim().toLowerCase()==='zip'){const t=ls('gh_token');ls('gh_token','');try{await $('#btnExport').onclick()}finally{ls('gh_token',t||'')}toonVeilig();return}
   if(k.trim().toLowerCase()==='naam'){ls('wie','');location.reload();return}
@@ -825,7 +946,7 @@ $('#btnMeer').onclick=async()=>{
     if(confirm(`Alles wissen op dit toestel? ${n} bezoeken en alle opnames. Alleen doen als je zip bij Lorenzo is.`)&&confirm('Zeker? Dit kan niet ongedaan gemaakt worden.')){
       await tx('visits','readwrite',s=>s.clear());await tx('media','readwrite',s=>s.clear());await herlaadVisits();huidig=null;$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();toast('Gewist')}
     return}
-  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();alert(`Versie ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
+  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();let tg=0;for(const s of STANDEN)if(statusVan(s.slug).bezocht)tg++;alert(`Build ${APP_BUILD}\nGegevens ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen, team ${tg} bezocht\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
 };
 
 start().catch(e=>{document.body.innerHTML='<div class="leeg">De app kon niet starten: '+esc(e.message)+'</div>'});
