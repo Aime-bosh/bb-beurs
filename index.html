@@ -310,7 +310,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v17';
+const APP_BUILD='2026-09-22 v18';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -502,7 +502,6 @@ function renderStand(){
       <button class="pil ${plAan?'aan':''}" data-op="plaud">Plaud${plAan?' · '+uur(v.plaud_sinds):''}</button>
       <button class="pil ${!telAan&&!plAan?'aan':''}" data-op="geen">Geen opname</button>
     </div>
-    <div id="plaudhint" class="waarsch" style="display:${plAan?'block':'none'}">Plaud loopt sinds ${uur(v.plaud_sinds)}. Tik opnieuw op Plaud als je hem uitzet, of gewoon op Opslaan.</div>
     <div id="telefoonknoppen" class="knoppen" style="margin-top:10px;display:${telAan?'grid':'none'}">
       <button class="knop" id="btnGesprek"><span class="punt"></span> Gesprek</button>
       <button class="knop" id="btnVoice"><span class="punt"></span> Voicenote</button>
