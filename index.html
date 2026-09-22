@@ -310,7 +310,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v16';
+const APP_BUILD='2026-09-22 v17';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -473,7 +473,7 @@ async function openStand(s){
   huidig=s;ls('huidig',s.slug);
   const v=visits[s.slug]||{slug:s.slug,bezoeker:wie,bezocht:false,contact_naam:'',contact_functie:'',contact_email:'',contact_tel:'',qr_raw:'',interesse:'',notitie:'',opname:null,geopend_om:null,opgeslagen_om:null};
   if(!v.geopend_om)v.geopend_om=new Date().toISOString();
-  v.opname=v.opname||ls('opname_'+wie)||(wie==='Lorenzo'?'telefoon':'plaud');
+  v.opname=v.opname||ls('opname_'+wie)||'telefoon';if(v.opname==='plaud')v.opname='telefoon';
   opname=v;
   mediaLijst=await mediaVoor(s.slug);
   renderStand();
@@ -482,6 +482,8 @@ async function openStand(s){
 }
 function renderStand(){
   const s=huidig,v=opname;
+  // Telefoon en Plaud zijn twee schakelaars die samen aan kunnen staan; Geen opname zet beide uit.
+  const telAan=v.opname==='telefoon';const plAan=!!(v.plaud_sinds&&!v.plaud_tot);
   $('#standtitel').textContent=s.naam;
   $('#voet').style.display='block';
   const el=$('#standinhoud');
@@ -496,19 +498,18 @@ function renderStand(){
   </div>
   <div class="blok"><h2>Opname</h2>
     <div class="keuze3" id="opnamekeuze">
-      <button class="pil ${v.opname==='telefoon'?'aan':''}" data-op="telefoon">Telefoon</button>
-      <button class="pil ${v.opname==='plaud'?'aan':''}" data-op="plaud">Plaud</button>
-      <button class="pil ${v.opname==='geen'?'aan':''}" data-op="geen">Geen opname</button>
+      <button class="pil ${telAan?'aan':''}" data-op="telefoon">Telefoon</button>
+      <button class="pil ${plAan?'aan':''}" data-op="plaud">Plaud${plAan?' · '+uur(v.plaud_sinds):''}</button>
+      <button class="pil ${!telAan&&!plAan?'aan':''}" data-op="geen">Geen opname</button>
     </div>
-    <div id="plaudhint" class="waarsch" style="display:${v.opname==='plaud'?'block':'none'}">Plaud aan? De app noteert de tijd; de opname wordt achteraf op tijd gekoppeld.</div>
-    <div id="telefoonknoppen" class="knoppen" style="margin-top:10px;display:${v.opname==='geen'?'none':'grid'}">
+    <div id="plaudhint" class="waarsch" style="display:${plAan?'block':'none'}">Plaud loopt sinds ${uur(v.plaud_sinds)}. Tik opnieuw op Plaud als je hem uitzet, of gewoon op Opslaan.</div>
+    <div id="telefoonknoppen" class="knoppen" style="margin-top:10px;display:${telAan?'grid':'none'}">
       <button class="knop" id="btnGesprek"><span class="punt"></span> Gesprek</button>
       <button class="knop" id="btnVoice"><span class="punt"></span> Voicenote</button>
     </div>
-    <button class="knop" id="btnPlaud" style="width:100%;margin-top:10px"></button>
     <div class="meter" id="meter" style="display:none"><i></i></div>
     <div id="stil" class="waarsch" style="display:none;border-left-color:#d3301f"><b>Geen geluid.</b> De microfoon lijkt onderbroken. Tik op Stop en dan opnieuw op Gesprek.</div>
-    <div class="hint" id="opnamehint" style="display:${v.opname==='geen'?'none':'block'}">Gesprek: vraag eerst mondeling toestemming. Voicenote: 30 seconden na het gesprek, in je eigen woorden, met de volgende stap.</div>
+    <div class="hint" id="opnamehint" style="display:${telAan?'block':'none'}">Gesprek: vraag eerst mondeling toestemming. Voicenote: 30 seconden na het gesprek, in je eigen woorden, met de volgende stap.</div>
     <div class="media" id="mediaAudio"></div>
   </div>
   <div class="blok"><h2>Contactpersoon</h2>
@@ -532,17 +533,18 @@ function renderStand(){
   <div class="blok"><h2>Notitie</h2>
     <textarea class="veld" id="notitie" placeholder="Kort: wat speelt er, wie beslist, volgende stap">${esc(v.notitie)}</textarea>
   </div>`;
-  el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=()=>{if(recorder){toast('Stop eerst de opname');return}v.opname=b.dataset.op;ls('opname_'+wie,v.opname);herteken();bewaarConcept()});
+  el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}const nu=new Date().toISOString();const op=b.dataset.op;
+    if(op==='telefoon'){v.opname=v.opname==='telefoon'?'geen':'telefoon';ls('opname_'+wie,v.opname);herteken();bewaarConcept();return}
+    if(op==='geen'){v.opname='geen';ls('opname_'+wie,'geen');if(v.plaud_sinds&&!v.plaud_tot)v.plaud_tot=nu;herteken();bewaarConcept();return}
+    // Plaud: alleen een tijdstip, zodat de Plaud-opname achteraf exact aan deze stand te koppelen is. Aan telt als bezig-signaal.
+    if(v.plaud_sinds&&!v.plaud_tot){v.plaud_tot=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}bewaarConcept();toast('Plaud-tijd vastgelegd')}
+    else{v.plaud_sinds=nu;v.plaud_tot=null;v.bezig_sinds=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}stuurBezig(v);toast('Plaud aan · '+uur(nu))}});
   el.querySelectorAll('#interesse .pil').forEach(b=>b.onclick=()=>{v.interesse=b.dataset.i;el.querySelectorAll('#interesse .pil').forEach(p=>p.classList.remove('aan'));b.classList.add('aan');bewaarConcept()});
   el.oninput=bewaarConcept;
   const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
   $('#btnGesprek').onclick=()=>toggleRec('gesprek',$('#btnGesprek'));
   $('#btnVoice').onclick=()=>toggleRec('voicenote',$('#btnVoice'));
-  // Plaud aan/uit legt alleen een tijdstip vast, zodat de Plaud-opname achteraf exact aan deze stand
-  // te koppelen is. Aan telt ook als bezig-signaal voor de collega's.
-  const plaudKnop=()=>{const b=$('#btnPlaud');if(!b)return;const aan=v.plaud_sinds&&!v.plaud_tot;b.textContent=aan?'Plaud uit · aan sinds '+uur(v.plaud_sinds):v.plaud_tot?'Plaud aan (vorige: '+uur(v.plaud_sinds)+' tot '+uur(v.plaud_tot)+')':'Plaud aan';b.classList.toggle('opneemt',!!aan)};
-  plaudKnop();
-  $('#btnPlaud').onclick=async()=>{const nu=new Date().toISOString();if(v.plaud_sinds&&!v.plaud_tot){v.plaud_tot=nu}else{v.plaud_sinds=nu;v.plaud_tot=null;v.bezig_sinds=nu}v.updated_at=nu;plaudKnop();try{await putVisit(v);visits[v.slug]=v}catch(e){}if(v.plaud_sinds&&!v.plaud_tot)stuurBezig(v);else bewaarConcept();toast(v.plaud_tot?'Plaud-tijd vastgelegd':'Plaud aan · '+uur(nu))};
+
   $('#btnScan').onclick=startScan;
   $('#foto').onchange=e=>fotoKaartje(e.target.files[0]);
   renderMedia();toonTeamMelding();
@@ -620,7 +622,6 @@ async function toggleRec(soort,btn){
     const m={slug:huidig.slug,soort,blob,mime:type,duur_s:duur,klok_s:klok,created:new Date().toISOString()};
     m.id=await addMedia(m);mediaLijst.push(m);opname.heeft_media=true;
     if(soort==='gesprek'&&opname.bezig_sinds)opname.bezig_sinds=new Date().toISOString();
-    if(opname.opname==='plaud'){opname.opname='telefoon';ls('opname_'+wie,'telefoon')}
     herteken();bewaarConcept();if(ghToken())telRij();
     toast(onderbroken?'Bewaard tot de onderbreking · '+fmt(duur):'Opname bewaard');
   };
@@ -701,7 +702,6 @@ $('#btnOpslaan').onclick=async()=>{
   if(!huidig)return;if(recorder){toast('Stop eerst de opname');return}
   leesVelden();const v=opname;
   if(!v.opname){toast('Kies: Telefoon, Plaud of Geen opname');return}
-  if(v.opname==='plaud'&&!confirm('Plaud-opname gestopt?'))return;
   v.bezocht=true;v.bezig_sinds=null;v.opgeslagen_om=new Date().toISOString();if(v.plaud_sinds&&!v.plaud_tot)v.plaud_tot=v.opgeslagen_om;v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
   await putVisit(v);visits[v.slug]=v;
   toast('Bewaard');if(ghToken()){telRij().then(()=>synchroniseer())}
