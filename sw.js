@@ -1,6 +1,6 @@
 // Kleine service worker: de app-schil in de cache, zodat het icoon op het beginscherm ook
 // zonder netwerk opent. Cache-first voor de eigen bestanden; verhoog VERSIE bij elke wijziging.
-const VERSIE = 'bb-beurs-v19';
+const VERSIE = 'bb-beurs-v20';
 const BESTANDEN = ['./', './index.html', './data.js', './plan.js', './jsqr.min.js', './fflate.min.js', './manifest.json', './icon.svg', './icon-180.png', './icon-512.png', './league-spartan.woff2', './logo-zwart.svg', './logo-wit.svg', './symbool-wit.svg'];
 
 // cache:'reload' haalt elk bestand vers van het netwerk. Zonder dat kan de browsercache binnen de
