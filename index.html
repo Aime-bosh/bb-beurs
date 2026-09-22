@@ -134,6 +134,8 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 .rij .stat{color:var(--zalm-d);font-weight:600;text-transform:none;letter-spacing:0}
 .rij.bezocht .stat{color:var(--groen)}
 #teammelding{margin:0 0 12px}
+.meter{height:8px;border-radius:4px;background:var(--licht);margin-top:10px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--groen);transition:width .1s}
 #planvlak{flex:1;min-height:0;overflow:hidden;touch-action:none;background:#ecebe7;position:relative}
 #plancanvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
 #plansvg .gebouw{fill:#e3e2dd;stroke:#d3d2cc;stroke-width:1.5}
@@ -308,7 +310,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v13';
+const APP_BUILD='2026-09-22 v14';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -425,7 +427,10 @@ async function toonApp(){
 }
 // Elke 20 s kijken: een 304 (niets nieuws) telt bij GitHub niet mee voor de limiet, dus dat is goedkoop.
 setInterval(()=>{if(wie&&document.visibilityState==='visible')haalTeam()},20000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wie){haalTeam();if(recorder)houdWakker()}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!wie)return;haalTeam();if(recorder)houdWakker();
+  // Automatisch hervatten na een onderbreking, één poging, binnen twee minuten. Lukt het niet
+  // (iOS wil soms een tik), dan blijft de melding staan en is de Gesprek-knop de hervat-knop.
+  if(hervatNodig&&!recorder&&huidig&&schakel('hervat')&&Date.now()-hervatNodig.om<120000){const h=hervatNodig;hervatNodig=null;const b=h.soort==='gesprek'?$('#btnGesprek'):$('#btnVoice');if(b)toggleRec(h.soort,b).then(()=>{if(recorder)toast('Opname hervat, deel 2')}).catch(()=>{})}});
 // Eén keer alle logo's ophalen terwijl er netwerk is; de service worker bewaart ze.
 async function haalLogosVooraf(){if(!navigator.onLine||ls('logos_'+(window.APP_VERSIE||'')))return;const l=STANDEN.map(s=>s.logo).filter(Boolean);for(let i=0;i<l.length;i+=6){await Promise.all(l.slice(i,i+6).map(u=>fetch(u).catch(()=>{})))}ls('logos_'+(window.APP_VERSIE||''),'1')}
 async function herlaadVisits(){visits={};(await allVisits()).forEach(v=>visits[v.slug]=v)}
@@ -500,6 +505,8 @@ function renderStand(){
       <button class="knop" id="btnGesprek"><span class="punt"></span> Gesprek</button>
       <button class="knop" id="btnVoice"><span class="punt"></span> Voicenote</button>
     </div>
+    <div class="meter" id="meter" style="display:none"><i></i></div>
+    <div id="stil" class="waarsch" style="display:none;border-left-color:#d3301f"><b>Geen geluid.</b> De microfoon lijkt onderbroken. Tik op Stop en dan opnieuw op Gesprek.</div>
     <div class="hint" id="opnamehint" style="display:${v.opname==='geen'?'none':'block'}">Gesprek: vraag eerst mondeling toestemming. Voicenote: 30 seconden na het gesprek, in je eigen woorden, met de volgende stap.</div>
     <div class="media" id="mediaAudio"></div>
   </div>
@@ -562,21 +569,44 @@ let wakeLock=null;
 async function houdWakker(){try{if('wakeLock' in navigator&&!wakeLock&&document.visibilityState==='visible'){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}}catch(e){wakeLock=null}}
 function laatSlapen(){try{if(wakeLock){wakeLock.release();wakeLock=null}}catch(e){}}
 function audioDuur(blob){return new Promise(ok=>{let klaar=false;const a=document.createElement('audio');const done=d=>{if(klaar)return;klaar=true;try{URL.revokeObjectURL(a.src)}catch(e){}ok(d)};try{a.preload='metadata';a.onloadedmetadata=()=>done(a.duration);a.onerror=()=>done(NaN);setTimeout(()=>done(NaN),2000);a.src=URL.createObjectURL(blob)}catch(e){done(NaN)}})}
+// v14: drie extra's, elk met een schakelaar in het menu (meter uit, mic uit, hervat uit) zodat een
+// toestel waarop iets misloopt in dertig seconden weer werkt zoals in v13, zonder nieuwe versie.
+const schakel=k=>!ls(k+'_uit');
+let audioCtx=null,meterTimer=null,meterStream=null,hervatNodig=null;
+function meterStart(ac,bron){
+  if(!ac)return;const el=$('#meter'),balk=el&&el.querySelector('i'),stil=$('#stil');if(!el)return;
+  try{meterStream=bron.clone();const src=ac.createMediaStreamSource(meterStream);const an=ac.createAnalyser();an.fftSize=512;src.connect(an);const buf=new Uint8Array(an.fftSize);
+    el.style.display='block';let stilSinds=0;
+    meterTimer=setInterval(()=>{an.getByteTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++){const d=(buf[i]-128)/128;s+=d*d}const rms=Math.sqrt(s/buf.length);
+      balk.style.width=Math.min(100,Math.round(rms*400))+'%';
+      if(document.visibilityState!=='visible'){stilSinds=0;return}
+      if(rms<0.004){if(!stilSinds)stilSinds=Date.now();if(stil&&Date.now()-stilSinds>8000)stil.style.display='block'}else{stilSinds=0;if(stil)stil.style.display='none'}},100);
+  }catch(e){meterStop()}
+}
+function meterStop(){clearInterval(meterTimer);meterTimer=null;try{if(meterStream)meterStream.getTracks().forEach(x=>x.stop())}catch(e){}meterStream=null;const el=$('#meter');if(el)el.style.display='none';const stil=$('#stil');if(stil)stil.style.display='none'}
 async function toggleRec(soort,btn){
   if(recorder){stopRec();return}
   if(!window.MediaRecorder){toast('Opnemen kan niet in deze browser');return}
-  let eigenStream;try{eigenStream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Geen toegang tot de microfoon');return}
-  stream=eigenStream;
+  // De AudioContext moet in de tik zelf aangemaakt worden, vóór de eerste await, anders weigert iOS hem.
+  let ac=null;if(schakel('meter')){try{ac=audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){ac=null}}
+  // Microfoon: automatische versterking aan, echo-onderdrukking uit (die dempt een gesprekspartner
+  // op afstand). Kent het toestel dat niet, dan gewoon {audio:true}, zoals in v13.
+  let eigenStream=null;
+  if(schakel('mic')){try{eigenStream=await navigator.mediaDevices.getUserMedia({audio:{autoGainControl:true,noiseSuppression:true,echoCancellation:false}})}catch(e){eigenStream=null}}
+  if(!eigenStream){try{eigenStream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Geen toegang tot de microfoon');return}}
+  stream=eigenStream;hervatNodig=null;
   const t=mime();const chunks=[];recSoort=soort;const rec=new MediaRecorder(eigenStream,t?{mimeType:t}:undefined);recorder=rec;
   rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
   // Microfoon weg (vergrendeld, camera, telefoontje): het stuk dat er is bewaren en dat zeggen.
   let muteTimer=null,onderbroken=false;
-  const valWeg=()=>{if(rec.state==='inactive'||onderbroken)return;onderbroken=true;stopRec();toast('Opname onderbroken: tik opnieuw op '+(soort==='gesprek'?'Gesprek':'Voicenote'))};
+  const valWeg=()=>{if(rec.state==='inactive'||onderbroken)return;onderbroken=true;hervatNodig={soort,om:Date.now()};stopRec();toast('Opname onderbroken: tik opnieuw op '+(soort==='gesprek'?'Gesprek':'Voicenote'))};
   const track=eigenStream.getAudioTracks()[0];
   if(track){track.onended=valWeg;track.onmute=()=>{clearTimeout(muteTimer);muteTimer=setTimeout(()=>{if(track.muted)valWeg()},3000)};track.onunmute=()=>clearTimeout(muteTimer)}
   rec.onerror=valWeg;
   rec.onstop=async()=>{
-    clearTimeout(muteTimer);
+    clearTimeout(muteTimer);meterStop();
+    // Stopte de opname zonder dat iemand op Stop tikte (spoor weg zonder event), dan is dat ook een onderbreking.
+    if(!rec._gevraagd&&!onderbroken){onderbroken=true;hervatNodig={soort,om:Date.now()};toast('Opname onderbroken: tik opnieuw op '+(soort==='gesprek'?'Gesprek':'Voicenote'))}
     const type=rec.mimeType||t||'audio/mp4';const blob=new Blob(chunks,{type});const klok=(Date.now()-recStart)/1000;
     eigenStream.getTracks().forEach(x=>x.stop());if(stream===eigenStream)stream=null;if(recorder===rec)recorder=null;clearInterval(recTimer);laatSlapen();
     if(blob.size<1000){toast('Opname te kort');herteken();return}
@@ -588,7 +618,7 @@ async function toggleRec(soort,btn){
     herteken();bewaarConcept();if(ghToken())telRij();
     toast(onderbroken?'Bewaard tot de onderbreking · '+fmt(duur):'Opname bewaard');
   };
-  rec.start(1000);recStart=Date.now();houdWakker();
+  rec.start(1000);recStart=Date.now();houdWakker();meterStart(ac,eigenStream);
   const ander=soort==='gesprek'?$('#btnVoice'):$('#btnGesprek');ander.disabled=true;
   btn.classList.add('opneemt');
   recTimer=setInterval(()=>{const s=(Date.now()-recStart)/1000;btn.innerHTML=`<span class="punt"></span> Stop · ${fmt(s)}`;if(s>20*60)stopRec()},500);
@@ -604,7 +634,7 @@ async function stuurBezig(v){
     const vers=await getVisit(v.slug);if(vers&&vers.updated_at===v.updated_at){vers.sync_at=v.updated_at;await putVisit(vers);visits[v.slug]=vers;if(opname&&opname.slug===v.slug)opname.sync_at=v.updated_at}
   }catch(e){logSync('bezig later via de rij: '+(e&&e.message||e))}
 }
-function stopRec(){if(recorder&&recorder.state!=='inactive')recorder.stop()}
+function stopRec(){if(recorder&&recorder.state!=='inactive'){recorder._gevraagd=true;recorder.stop()}}
 
 // ── foto ──────────────────────────────────────────────────────────────
 function fotoKaartje(file){
@@ -741,7 +771,7 @@ async function koppelBackup(tekst){
   toast('Back-up gekoppeld');toonVeilig();synchroniseer();haalPrive();haalPitch();return true;
 }
 window.addEventListener('online',()=>{synchroniseer();haalTeam()});
-if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sync:()=>synchroniseer(),teken:()=>tekenNu(),view:()=>view};
+if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sync:()=>synchroniseer(),teken:()=>tekenNu(),view:()=>view,spoor:()=>stream,hervat:()=>hervatNodig};
 setInterval(()=>synchroniseer(),45000);
 
 // ── veiligheid: wat staat alleen nog op dit toestel? ───────────────────
@@ -931,8 +961,10 @@ $('#btnExport').onclick=async()=>{
 
 // ── meer: wie, wissen ─────────────────────────────────────────────────
 $('#btnMeer').onclick=async()=>{
-  const k=prompt(`Ingelogd als ${wie}.\n\nTyp:\n  naam  = andere naam kiezen\n  koppel = back-up koppelen (sleutel plakken)\n  zip   = een zip maken en delen\n  vernieuw = de nieuwste versie van de app ophalen\n  wis   = alle gegevens op dit toestel wissen\n  info  = versie en aantal\n  log   = de laatste verzendingen naar de back-up`);
+  const k=prompt(`Ingelogd als ${wie}.\n\nTyp:\n  naam  = andere naam kiezen\n  koppel = back-up koppelen (sleutel plakken)\n  zip   = een zip maken en delen\n  vernieuw = de nieuwste versie van de app ophalen\n  meter uit / mic uit / hervat uit = een opname-extra uitzetten (aan = weer aanzetten)\n  wis   = alle gegevens op dit toestel wissen\n  info  = versie en aantal\n  log   = de laatste verzendingen naar de back-up`);
   if(!k)return;
+  const sm=k.trim().toLowerCase().match(/^(meter|mic|hervat)\s+(uit|aan)$/);
+  if(sm){if(recorder){toast('Stop eerst de opname');return}ls(sm[1]+'_uit',sm[2]==='uit'?'1':'');toast(sm[1]+' staat nu '+sm[2]);return}
   if(k.trim().toLowerCase()==='log'){alert(syncLog.length?syncLog.slice(-15).join('\n'):'Nog niets verstuurd in deze sessie.');return}
   if(k.trim().toLowerCase()==='vernieuw'){ // de reddingsboei als een toestel op een oude versie blijft hangen; raakt de opslag niet
     if(recorder){toast('Stop eerst de opname');return}if(!navigator.onLine){toast('Geen netwerk');return}
@@ -946,7 +978,7 @@ $('#btnMeer').onclick=async()=>{
     if(confirm(`Alles wissen op dit toestel? ${n} bezoeken en alle opnames. Alleen doen als je zip bij Lorenzo is.`)&&confirm('Zeker? Dit kan niet ongedaan gemaakt worden.')){
       await tx('visits','readwrite',s=>s.clear());await tx('media','readwrite',s=>s.clear());await herlaadVisits();huidig=null;$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();toast('Gewist')}
     return}
-  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();let tg=0;for(const s of STANDEN)if(statusVan(s.slug).bezocht)tg++;alert(`Build ${APP_BUILD}\nGegevens ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen, team ${tg} bezocht\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
+  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();let tg=0;for(const s of STANDEN)if(statusVan(s.slug).bezocht)tg++;alert(`Build ${APP_BUILD}\nOpname-extra's: meter ${schakel('meter')?'aan':'uit'}, mic ${schakel('mic')?'aan':'uit'}, hervat ${schakel('hervat')?'aan':'uit'}\nGegevens ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen, team ${tg} bezocht\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
 };
 
 start().catch(e=>{document.body.innerHTML='<div class="leeg">De app kon niet starten: '+esc(e.message)+'</div>'});
