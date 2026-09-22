@@ -117,6 +117,16 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 #plan.actief{display:flex}
 #plan .kop button{min-width:44px;padding-left:14px;padding-right:14px}
 #plan .kop .merk{display:none}
+#pitch{position:fixed;inset:0;z-index:16;background:var(--wit);display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#pitch.actief{display:flex}
+#pitch .kop button{min-width:44px;padding-left:14px;padding-right:14px}
+#pitchinhoud{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 18px calc(40px + env(safe-area-inset-bottom));max-width:760px;width:100%;margin:0 auto;box-sizing:border-box}
+#pitchinhoud h2{font-size:14px;text-transform:uppercase;letter-spacing:.12em;margin:26px 0 10px;font-weight:700}
+#pitchinhoud h2:first-child{margin-top:4px}
+#pitchinhoud .zeg{font-size:19px;line-height:1.4;border-left:3px solid var(--zalm);padding:4px 0 2px 14px;margin:0 0 12px}
+#pitchinhoud .regie{font-size:15px;color:var(--grijs);font-style:italic;margin:0 0 12px}
+#pitchinhoud p{margin:0 0 12px}
+.kop button.pitchknop{padding:10px 14px 7px;flex:none}
 .legende{display:flex;gap:14px;flex-wrap:wrap;padding:10px 18px 7px;font-size:13px;color:var(--grijs);border-bottom:1px solid var(--lijn)}
 .legende span{display:flex;align-items:center;gap:6px}
 .legende .l{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--inkt);display:inline-block;margin-top:-3px}
@@ -214,6 +224,7 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
         <button class="pil" id="filterAlle">Alle standen</button>
         <button class="pil" id="filterOpen">Nog te doen</button>
         <button class="pil plan" id="btnPlan">Grondplan</button>
+        <button class="pil" id="btnPitch">Pitch</button>
       </div>
       <div id="rijen"></div>
     </div>
@@ -225,6 +236,7 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
       <img class="merk" src="symbool-wit.svg" alt="">
       <h1 id="standtitel">Stand</h1>
       <span class="klein" id="standteller"></span>
+      <button class="pitchknop" id="btnPitchStand">Pitch</button>
     </div>
     <div class="inhoud" id="standinhoud">
       <div class="leeg">Kies een stand in de lijst.</div>
@@ -241,6 +253,11 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
   <div class="legende" id="legende"></div>
   <div id="planvlak"><div class="planteller" id="planteller"></div><div class="planknoppen"><button id="btnZoomIn" aria-label="Inzoomen">+</button><button id="btnZoomUit" aria-label="Uitzoomen">−</button></div><canvas id="plancanvas"></canvas></div>
   <div id="planblad"></div>
+</div>
+
+<div id="pitch">
+  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1 id="pitchtitel">Pitch</h1><button id="btnPitchDicht" aria-label="Sluiten">✕</button></div>
+  <div id="pitchinhoud"></div>
 </div>
 
 <div id="scanner">
@@ -270,6 +287,24 @@ async function haalPrive(){
     if(tekst!==ls('prive')){ls('prive',tekst);pasPriveToe();renderLijst()}
   }catch(e){}
 }
+// De pitch staat ook in de private repo, zodat hij niet publiek is en kan wijzigen zonder nieuwe appversie.
+// Hij wordt op het toestel bewaard; zonder netwerk toont de app de laatst opgehaalde tekst.
+async function haalPitch(){
+  try{if(!ghToken()||!navigator.onLine)return;
+    const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/_app/pitch.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
+    if(a.status!==200)return;const tekst=await a.text();const p=JSON.parse(tekst);if(!p||!Array.isArray(p.blokken))return;
+    if(tekst!==ls('pitch')){ls('pitch',tekst);if($('#pitch').classList.contains('actief'))renderPitch()}
+  }catch(e){}
+}
+function renderPitch(){
+  let p=null;try{p=JSON.parse(ls('pitch')||'null')}catch(e){}
+  const el=$('#pitchinhoud');
+  if(!p||!Array.isArray(p.blokken)){el.innerHTML=`<div class="leeg">${ghToken()?'De pitch is nog niet binnen. Zoek netwerk en open dit scherm opnieuw.':'De pitch komt binnen zodra de back-up gekoppeld is.'}</div>`;return}
+  $('#pitchtitel').textContent=p.titel||'Pitch';
+  el.innerHTML=p.blokken.map(b=>{const t=esc(b&&b.tekst);const s=b&&b.type;return s==='kop'?`<h2>${t}</h2>`:s==='zeg'?`<div class="zeg">${t}</div>`:s==='regie'?`<div class="regie">${t}</div>`:`<p>${t}</p>`}).join('');
+  el.scrollTop=0;
+}
+function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
 function standSort(s){const m=String(s||'').match(/\d+/);return m?parseInt(m[0],10):999999}
 
@@ -314,6 +349,7 @@ async function toonApp(){
   renderLijst();
   if(ghToken()){telRij().then(()=>synchroniseer())}
   haalPrive();
+  haalPitch();
   const terug=ls('huidig');if(terug){const st=STANDEN.find(x=>x.slug===terug);if(st)openStand(st)}
   haalLogosVooraf();
 }
@@ -593,7 +629,7 @@ async function koppelBackup(tekst){
     if(a.status!==200){ls('gh_token','');toast('Sleutel geweigerd door GitHub ('+a.status+')');toonVeilig();return false}
     const r=await a.json();if(!r.private){ls('gh_token','');toast('Stop: de gegevensrepo is niet privaat');return false}
   }catch(e){toast('Sleutel bewaard. Controle volgt zodra er netwerk is.');toonVeilig();return true}
-  toast('Back-up gekoppeld');toonVeilig();synchroniseer();haalPrive();return true;
+  toast('Back-up gekoppeld');toonVeilig();synchroniseer();haalPrive();haalPitch();return true;
 }
 window.addEventListener('online',()=>synchroniseer());
 if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sync:()=>synchroniseer(),teken:()=>tekenNu(),view:()=>view};
@@ -739,6 +775,9 @@ function koppelPlan(){
 }
 $('#btnPlan').onclick=()=>openPlan(null);
 $('#btnPlanDicht').onclick=sluitPlan;
+$('#btnPitch').onclick=openPitch;
+$('#btnPitchStand').onclick=openPitch;
+$('#btnPitchDicht').onclick=()=>$('#pitch').classList.remove('actief');
 $('#btnZoomIn').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(0.7,r.left+r.width/2,r.top+r.height/2)};
 $('#btnZoomUit').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(1.4,r.left+r.width/2,r.top+r.height/2)};
 $('#btnPlanAlles').onclick=()=>pasIn(0,0,PLAN.w,PLAN.h,20);
