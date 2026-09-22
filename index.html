@@ -133,18 +133,13 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 .legende span{display:flex;align-items:center;gap:5px}
 .legende .l{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--inkt);display:inline-block;margin-top:-3px}
 .l.mijn,.l.open{background:var(--wit)}.l.klaar{background:var(--groen);border-color:var(--groen)}.l.c1{background:#e2e8ee;border-color:#93a1ae}.l.c2{background:#efe6d9;border-color:#b3a48d}.l.c0{background:#e8e8e8;border-color:#9a9a9a}.l.geen{background:#efeeea;border-color:#dddcd6}.l.bezig{background:#fdd9d3;border-color:#f37262;border-style:dashed;border-width:2px}.l.begonnen{background:#fde3df;border-color:#f37262;border-style:dashed}.l.deels{background:#fde3df;border-color:#f37262}.l.pa{background:var(--zalm);border-color:var(--zalm);border-radius:50%;width:11px;height:11px}
-/* gesegmenteerde balk: één rand, gelijke vakken, één actief in zwart */
-.seg{display:flex;border:1.5px solid var(--inkt);border-radius:999px;overflow:hidden;background:var(--wit);margin-bottom:10px}
-.seg button{flex:1;min-width:0;border:0;border-left:1.5px solid var(--inkt);background:transparent;color:var(--inkt);padding:11px 6px 8px;min-height:44px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.seg button:first-of-type{border-left:0}
-.seg button.aan{background:var(--inkt);color:var(--wit)}
-.seg.klein button{min-height:38px;padding:8px 6px 5px;font-size:15px}
-.seg .lab{flex:0 0 auto;display:flex;align-items:center;padding:0 12px 0 16px;font-size:12px;color:var(--grijs);text-transform:uppercase;letter-spacing:.08em}
-.seg .lab+button{border-left:1.5px solid var(--inkt)}
+/* rijen van gelijke, losse knoppen: elke filter is een eigen pil */
+.schakel.gelijk{flex-wrap:nowrap;margin-bottom:10px}
+.schakel.gelijk .pil{flex:1 1 0;min-width:0;padding-left:4px;padding-right:4px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 #lijst .knoppen{margin-bottom:10px}
 #lijst .knop.plan{border-color:var(--zalm-d);color:var(--zalm-d)}
-.planrij{display:flex;gap:8px;padding:8px 18px 4px;border-bottom:1px solid var(--lijn);background:var(--wit)}
-.planrij .seg{margin:0}.planrij .seg:first-child{flex:1 1 60%}.planrij .seg:last-child{flex:1 1 40%}
+.planrij{padding:8px 18px 0;border-bottom:1px solid var(--lijn);background:var(--wit)}
+.keuze3 .pil.plaud.aan{background:var(--wit);color:var(--zalm-d);border-color:var(--zalm-d)}
 .rij .stat{color:var(--zalm-d);font-weight:600;text-transform:none;letter-spacing:0}
 .rij.bezocht .stat{color:var(--groen)}
 #teammelding{margin:0 0 12px}
@@ -239,8 +234,8 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
       <div class="veilig" id="veilig"></div>
       <input id="zoek" class="zoek" type="search" placeholder="Zoek bedrijf of standnummer" autocomplete="off">
       <div class="knoppen"><button class="knop plan" id="btnPlan">Grondplan</button><button class="knop" id="btnPitch">Pitch</button></div>
-      <div class="seg" id="filters"><button class="aan" id="filterOpen">Open</button><button id="filterAlle">Alle</button><button id="filterMijn">Mijn bezoeken</button></div>
-      <div class="seg klein" id="prioFilter"><span class="lab">Prio</span><button class="aan" data-prio="">Alle</button><button data-prio="A">A</button><button data-prio="B">B</button><button data-prio="C">C</button></div>
+      <div class="schakel gelijk" id="filters"><button class="pil aan" id="filterOpen">Open</button><button class="pil" id="filterAlle">Alle</button><button class="pil" id="filterMijn">Mijn bezoeken</button></div>
+      <div class="schakel gelijk" id="prioFilter"><button class="pil aan" data-prio="">Alle</button><button class="pil" data-prio="A">A</button><button class="pil" data-prio="B">B</button><button class="pil" data-prio="C">C</button></div>
       <div id="rijen"></div>
     </div>
   </section>
@@ -263,9 +258,9 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 </div>
 
 <div id="plan">
-  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
+  <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Laatste</button><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
   <div class="legende" id="legende"></div>
-  <div class="planrij"><div class="seg klein" id="planPrio"><span class="lab">Prio</span><button class="aan" data-prio="">Alle</button><button data-prio="A">A</button><button data-prio="B">B</button><button data-prio="C">C</button></div><div class="seg klein"><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Laatste</button></div></div>
+  <div class="planrij"><div class="schakel gelijk" id="planPrio"><button class="pil aan" data-prio="">Alle</button><button class="pil" data-prio="A">A</button><button class="pil" data-prio="B">B</button><button class="pil" data-prio="C">C</button></div></div>
   <div id="planvlak"><div class="planteller" id="planteller"></div><div class="planknoppen"><button id="btnZoomIn" aria-label="Inzoomen">+</button><button id="btnZoomUit" aria-label="Uitzoomen">−</button></div><canvas id="plancanvas"></canvas></div>
   <div id="planblad"></div>
 </div>
@@ -321,7 +316,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v20';
+const APP_BUILD='2026-09-22 v21';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -403,7 +398,7 @@ function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorag
 // ── toestand ──────────────────────────────────────────────────────────
 let wie=ls('wie'), filter='open', prioFilter=ls('prio_filter')||'', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
 
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('zichtbaar');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('zichtbaar'),2200)}
+function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('zichtbaar');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('zichtbaar'),ms||2200)}
 function standalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
 function mobiel(){return /iPhone|iPad|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.userAgent))}
 
@@ -462,7 +457,7 @@ function renderLijst(){
   toonVeilig();
   const lijst=zichtbareStanden();
   let teamGedaan=0,mijnGedaan=0,tot=0;for(const s of STANDEN){if(prioFilter&&s.prio!==prioFilter)continue;tot++;const st=statusVan(s.slug);if(st.bezocht)teamGedaan++;if(st.door.includes(wie))mijnGedaan++}
-  $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)}</span>Team ${teamGedaan}/${tot} · jij ${mijnGedaan}`;
+  $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)} · team</span>${teamGedaan}/${tot} · jij ${mijnGedaan}`;
   const el=$('#rijen');el.innerHTML='';
   if(!lijst.length){el.innerHTML='<div class="leeg">Niets gevonden.</div>';return}
   for(const s of lijst){
@@ -475,10 +470,10 @@ function renderLijst(){
   }
 }
 $('#zoek').oninput=e=>{zoek=e.target.value;renderLijst()};
-for(const [id,f] of [['#filterMijn','mijn'],['#filterAlle','alle'],['#filterOpen','open']]){$(id).onclick=()=>{filter=f;document.querySelectorAll('#filters button').forEach(p=>p.classList.remove('aan'));$(id).classList.add('aan');renderLijst()}}
+for(const [id,f] of [['#filterMijn','mijn'],['#filterAlle','alle'],['#filterOpen','open']]){$(id).onclick=()=>{filter=f;document.querySelectorAll('#filters .pil').forEach(p=>p.classList.remove('aan'));$(id).classList.add('aan');renderLijst()}}
 // Eén prioriteitsfilter voor lijst en grondplan: A eerst, dan B, C laatst. Blijft bewaard op het toestel.
-function zetPrio(pr){prioFilter=pr;ls('prio_filter',pr);document.querySelectorAll('#prioFilter button, #planPrio button').forEach(b=>b.classList.toggle('aan',b.dataset.prio===pr));renderLijst();tekenPlan()}
-document.querySelectorAll('#prioFilter button, #planPrio button').forEach(b=>b.onclick=()=>zetPrio(b.dataset.prio));
+function zetPrio(pr){prioFilter=pr;ls('prio_filter',pr);document.querySelectorAll('#prioFilter .pil, #planPrio .pil').forEach(b=>b.classList.toggle('aan',b.dataset.prio===pr));renderLijst();tekenPlan()}
+document.querySelectorAll('#prioFilter .pil, #planPrio .pil').forEach(b=>b.onclick=()=>zetPrio(b.dataset.prio));
 function kortBeurs(b){return /empack/i.test(b)?'Empack':/transport/i.test(b)?'Transport & Logistics':b}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
@@ -514,7 +509,7 @@ function renderStand(){
   <div class="blok"><h2>Opname</h2>
     <div class="keuze3" id="opnamekeuze">
       <button class="pil ${telAan?'aan':''}" data-op="telefoon">Telefoon</button>
-      <button class="pil ${plAan?'aan':''}" data-op="plaud">Plaud${plAan?' · '+uur(v.plaud_sinds):''}</button>
+      <button class="pil plaud ${plAan?'aan':''}" data-op="plaud">Plaud${plAan?' · '+uur(v.plaud_sinds):''}</button>
       <button class="pil ${!telAan&&!plAan?'aan':''}" data-op="geen">Geen opname</button>
     </div>
     <div id="telefoonknoppen" class="knoppen" style="margin-top:10px;display:${telAan?'grid':'none'}">
@@ -551,8 +546,8 @@ function renderStand(){
     if(op==='telefoon'){v.opname=v.opname==='telefoon'?'geen':'telefoon';ls('opname_'+wie,v.opname);herteken();bewaarConcept();return}
     if(op==='geen'){v.opname='geen';ls('opname_'+wie,'geen');if(v.plaud_sinds&&!v.plaud_tot)v.plaud_tot=nu;herteken();bewaarConcept();return}
     // Plaud: alleen een tijdstip, zodat de Plaud-opname achteraf exact aan deze stand te koppelen is. Aan telt als bezig-signaal.
-    if(v.plaud_sinds&&!v.plaud_tot){v.plaud_tot=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}bewaarConcept();toast('Plaud-tijd vastgelegd')}
-    else{v.plaud_sinds=nu;v.plaud_tot=null;v.bezig_sinds=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}stuurBezig(v);toast('Plaud aan · '+uur(nu))}});
+    if(v.plaud_sinds&&!v.plaud_tot){v.plaud_tot=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}bewaarConcept();toast('Plaud-tijd vastgelegd',900)}
+    else{v.plaud_sinds=nu;v.plaud_tot=null;v.bezig_sinds=nu;v.updated_at=nu;herteken();try{await putVisit(v);visits[v.slug]=v}catch(e){}stuurBezig(v);toast('Plaud aan · '+uur(nu),900)}});
   el.querySelectorAll('#interesse .pil').forEach(b=>b.onclick=()=>{v.interesse=b.dataset.i;el.querySelectorAll('#interesse .pil').forEach(p=>p.classList.remove('aan'));b.classList.add('aan');bewaarConcept()});
   el.oninput=bewaarConcept;
   const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
@@ -876,22 +871,24 @@ function tekenNu(){
     else{const lang=/mainstreet/i.test(l.t);ctx.save();ctx.translate(l.x,l.y);if(lang)ctx.rotate(-Math.PI/2);ctx.font=`600 ${lang?17:19}px 'League Spartan',sans-serif`;ctx.fillStyle=lang?'#e59c90':'#b9a9a4';ctx.fillText(t,0,0);ctx.restore()}}
   // onze standen
   const dicht=r.width/view.k<820;const klein=13*view.k<6.5;
-  PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=standKlasse(s0,planNu);s0._k=kl;st=STIJL[kl]||STIJL.leeg;ctx.fillStyle=st[0];ctx.strokeStyle=st[1];ctx.lineWidth=st[2];
-    if(kl==='s bezig'||kl==='s begonnen')ctx.setLineDash([7,4]);ctx.fill(s0.p);ctx.stroke(s0.p);ctx.setLineDash([]);
-    if(i===planGekozen){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(s0.p)}});
-  PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=s0._k;const ss=s0.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return;const b=s0.b;const eerste=ss[0];
-    const klaar=kl==='s klaar';const buiten=kl==='s buiten';const gedaan=ss.filter(x=>statusVan(x.slug).bezocht).length;
-    // Vaste regels: het nummer staat altijd gecentreerd onderaan, met een vaste marge van de rand, en
-    // krimpt tot het in de breedte past. Een logo komt alleen in de bovenste helft als het vak hoog
-    // genoeg is. Bezocht toont alleen het vinkje; buiten het filter geen logo en een grijs nummer.
-    const MARGE=7,NR=13;
-    const label=s0.zone?`${gedaan}/${ss.length}`:String(eerste.stand).split('|')[0].trim();
-    const metLogo=dicht&&!s0.zone&&!klaar&&!buiten&&eerste.logo&&b.h>=NR+MARGE*2+22&&b.w>=30;
-    if(metLogo){const im=logoVan(eerste.logo);if(im){const ruimteH=b.h-(NR+MARGE*2)-MARGE;const m=Math.min(b.w-2*MARGE,ruimteH,64);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,s0.cx-w/2,b.y0+MARGE+(ruimteH-h)/2,w,h)}}
-    if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',s0.cx,s0.cy+1)}
-    else if(!klein){let px=NR;ctx.font=`${buiten?500:700} ${px}px 'League Spartan',sans-serif`;while(px>8&&ctx.measureText(label).width>b.w-2*MARGE){px--;ctx.font=`${buiten?500:700} ${px}px 'League Spartan',sans-serif`}
-      ctx.fillStyle=buiten?'#a9a8a2':'#14171c';const ty=metLogo?b.y1-MARGE-px/2+1:s0.cy+1;ctx.fillText(label,s0.cx,ty)}
-    if(!klaar&&kl!=='s buiten'&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}});
+  // Twee beurten: eerst alle vullingen, dan alle randen. Anders bedekt de vulling van een later
+  // getekend buurvak de rand van het vorige, en heeft een vak maar drie lijnen.
+  const zichtbaar=[];PLAN.standen.forEach((s0,i)=>{if(!zie(s0.b))return;const kl=standKlasse(s0,planNu);s0._k=kl;zichtbaar.push(i);st=STIJL[kl]||STIJL.leeg;ctx.fillStyle=st[0];ctx.fill(s0.p)});
+  for(const i of zichtbaar){const s0=PLAN.standen[i];st=STIJL[s0._k]||STIJL.leeg;ctx.strokeStyle=st[1];ctx.lineWidth=st[2];if(s0._k==='s bezig'||s0._k==='s begonnen')ctx.setLineDash([7,4]);ctx.stroke(s0.p);ctx.setLineDash([]);if(i===planGekozen){ctx.strokeStyle='#fa8072';ctx.lineWidth=6;ctx.stroke(s0.p)}}
+  // Vaste regels voor de inhoud van een vak: één lettergrootte voor alle nummers tegelijk (de grootste
+  // die in het smalste zichtbare vak past), het nummer altijd gecentreerd onderaan met dezelfde marge,
+  // het logo altijd in de ruimte erboven en geschaald naar het vak. Te klein voor beide: alleen het
+  // nummer in het midden. Bezocht: alleen het vinkje. Buiten het filter: geen logo, grijs nummer.
+  const NR=13,MIN=8;const items=[];let px=NR;
+  for(const i of zichtbaar){const s0=PLAN.standen[i];const ss=s0.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)continue;const gedaan=ss.filter(x=>statusVan(x.slug).bezocht).length;
+    const label=s0.zone?`${gedaan}/${ss.length}`:String(ss[0].stand).split('|')[0].trim();const marge=s0.b.h<40?3:6;items.push({s0,ss,label,marge});
+    if(s0._k!=='s klaar'){ctx.font="700 13px 'League Spartan',sans-serif";const past=Math.floor(NR*(s0.b.w-2*marge)/Math.max(1,ctx.measureText(label).width));if(past<px)px=Math.max(MIN,past)}}
+  for(const it of items){const {s0,ss,label,marge}=it;const b=s0.b;const kl=s0._k;const klaar=kl==='s klaar';const buiten=kl==='s buiten';const eerste=ss[0];
+    if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',s0.cx,s0.cy+1);continue}
+    const band=px+2*marge;const ruimteH=b.h-band-marge;let metLogo=false;
+    if(!s0.zone&&!buiten&&eerste.logo&&ruimteH>=10&&b.w-2*marge>=10){const im=logoVan(eerste.logo);if(im){const m=Math.min(b.w-2*marge,ruimteH,64);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,s0.cx-w/2,b.y0+marge+(ruimteH-h)/2,w,h);metLogo=true}}
+    if(!klein){ctx.font=`${buiten?500:700} ${px}px 'League Spartan',sans-serif`;ctx.fillStyle=buiten?'#a9a8a2':'#14171c';ctx.fillText(label,s0.cx,metLogo?b.y1-marge-px/2+1:s0.cy+1)}
+    if(!klaar&&!buiten&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}}
   let af=0,tot=0;for(const x of STANDEN){if(prioFilter&&x.prio!==prioFilter)continue;tot++;if(statusVan(x.slug).bezocht)af++}
   $('#planteller').textContent=`Team ${af}/${tot}${prioFilter?' · prio '+prioFilter:''}`;
 }
