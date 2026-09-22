@@ -310,7 +310,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v15';
+const APP_BUILD='2026-09-22 v16';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -339,7 +339,7 @@ async function haalTeam(){
     for(let i=0;i<ophalen.length;i+=6){await Promise.all(ophalen.slice(i,i+6).map(async n=>{try{
       const b=await metTimeout(`https://api.github.com/repos/${GH_REPO}/git/blobs/${n.sha}`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'},20000);
       if(b.status!==200)return;const v=JSON.parse(await b.text());if(!v||typeof v!=='object')return;
-      (data[n.slug]=data[n.slug]||[]).push({bezoeker:n.bezoeker,bezocht:!!v.bezocht,bezig_sinds:v.bezig_sinds||null,opgeslagen_om:v.opgeslagen_om||null,updated_at:v.updated_at||null,contact_naam:v.contact_naam||'',notitie:v.notitie||'',heeft_media:!!v.heeft_media,interesse:v.interesse||'',_team:true});
+      (data[n.slug]=data[n.slug]||[]).push({bezoeker:n.bezoeker,bezocht:!!v.bezocht,bezig_sinds:v.bezig_sinds||null,opgeslagen_om:v.opgeslagen_om||null,updated_at:v.updated_at||null,contact_naam:v.contact_naam||'',notitie:v.notitie||'',heeft_media:!!v.heeft_media,plaud_sinds:v.plaud_sinds||null,interesse:v.interesse||'',_team:true});
     }catch(e){}}))}
     teamCache={etag:a.headers.get('etag')||'',paden,data};team=data;ls('team',JSON.stringify(teamCache));
     logSync('team '+Object.keys(data).length+' standen, '+ophalen.length+' nieuw, rest '+(a.headers.get('x-ratelimit-remaining')||'?'));
@@ -354,7 +354,7 @@ function statusVan(slug){
   const bezocht=door.length>0;
   const bz=tm.filter(t=>!t.bezocht&&t.bezoeker!==wie&&t.bezig_sinds&&nu-Date.parse(t.bezig_sinds)<BEZIG_MS);
   const bezig=!bezocht&&bz.length>0;
-  const inhoud=v=>!!(v&&!v.bezocht&&(v.contact_naam||v.notitie||v.heeft_media||v.contact_email||v.qr_raw));
+  const inhoud=v=>!!(v&&!v.bezocht&&(v.contact_naam||v.notitie||v.heeft_media||v.contact_email||v.qr_raw||v.plaud_sinds));
   const bg=[];if(inhoud(eigen))bg.push(wie);for(const t of tm)if(inhoud(t)&&!bg.includes(t.bezoeker))bg.push(t.bezoeker);
   const begonnen=!bezocht&&!bezig&&bg.length>0;
   const laatst=tm.filter(t=>t.bezocht&&t.opgeslagen_om).map(t=>t.opgeslagen_om).sort().pop()||(eigen&&eigen.bezocht?eigen.opgeslagen_om:null);
@@ -505,6 +505,7 @@ function renderStand(){
       <button class="knop" id="btnGesprek"><span class="punt"></span> Gesprek</button>
       <button class="knop" id="btnVoice"><span class="punt"></span> Voicenote</button>
     </div>
+    <button class="knop" id="btnPlaud" style="width:100%;margin-top:10px"></button>
     <div class="meter" id="meter" style="display:none"><i></i></div>
     <div id="stil" class="waarsch" style="display:none;border-left-color:#d3301f"><b>Geen geluid.</b> De microfoon lijkt onderbroken. Tik op Stop en dan opnieuw op Gesprek.</div>
     <div class="hint" id="opnamehint" style="display:${v.opname==='geen'?'none':'block'}">Gesprek: vraag eerst mondeling toestemming. Voicenote: 30 seconden na het gesprek, in je eigen woorden, met de volgende stap.</div>
@@ -537,6 +538,11 @@ function renderStand(){
   const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
   $('#btnGesprek').onclick=()=>toggleRec('gesprek',$('#btnGesprek'));
   $('#btnVoice').onclick=()=>toggleRec('voicenote',$('#btnVoice'));
+  // Plaud aan/uit legt alleen een tijdstip vast, zodat de Plaud-opname achteraf exact aan deze stand
+  // te koppelen is. Aan telt ook als bezig-signaal voor de collega's.
+  const plaudKnop=()=>{const b=$('#btnPlaud');if(!b)return;const aan=v.plaud_sinds&&!v.plaud_tot;b.textContent=aan?'Plaud uit · aan sinds '+uur(v.plaud_sinds):v.plaud_tot?'Plaud aan (vorige: '+uur(v.plaud_sinds)+' tot '+uur(v.plaud_tot)+')':'Plaud aan';b.classList.toggle('opneemt',!!aan)};
+  plaudKnop();
+  $('#btnPlaud').onclick=async()=>{const nu=new Date().toISOString();if(v.plaud_sinds&&!v.plaud_tot){v.plaud_tot=nu}else{v.plaud_sinds=nu;v.plaud_tot=null;v.bezig_sinds=nu}v.updated_at=nu;plaudKnop();try{await putVisit(v);visits[v.slug]=v}catch(e){}if(v.plaud_sinds&&!v.plaud_tot)stuurBezig(v);else bewaarConcept();toast(v.plaud_tot?'Plaud-tijd vastgelegd':'Plaud aan · '+uur(nu))};
   $('#btnScan').onclick=startScan;
   $('#foto').onchange=e=>fotoKaartje(e.target.files[0]);
   renderMedia();toonTeamMelding();
@@ -696,7 +702,7 @@ $('#btnOpslaan').onclick=async()=>{
   leesVelden();const v=opname;
   if(!v.opname){toast('Kies: Telefoon, Plaud of Geen opname');return}
   if(v.opname==='plaud'&&!confirm('Plaud-opname gestopt?'))return;
-  v.bezocht=true;v.bezig_sinds=null;v.opgeslagen_om=new Date().toISOString();v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
+  v.bezocht=true;v.bezig_sinds=null;v.opgeslagen_om=new Date().toISOString();if(v.plaud_sinds&&!v.plaud_tot)v.plaud_tot=v.opgeslagen_om;v.updated_at=v.opgeslagen_om;v.bezoeker=wie;
   await putVisit(v);visits[v.slug]=v;
   toast('Bewaard');if(ghToken()){telRij().then(()=>synchroniseer())}
   // Geen vaste route meer: na het opslaan toont het grondplan wat rondom nog open is.
@@ -741,7 +747,7 @@ let syncBezig=false,syncStatus={op:'',fout:'',wacht:0,geteld:false};const syncLo
 function logSync(t){syncLog.push(new Date().toLocaleTimeString('nl-BE')+' '+t);if(syncLog.length>40)syncLog.shift()}
 async function telRij(){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.geteld=true;toonVeilig();return q}
 async function wachtrij(){
-  const vs=(await allVisits()).filter(v=>v.updated_at&&v.bezoeker===wie&&!v._team&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media||v.bezig_sinds)&&v.sync_at!==v.updated_at);
+  const vs=(await allVisits()).filter(v=>v.updated_at&&v.bezoeker===wie&&!v._team&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media||v.bezig_sinds||v.plaud_sinds)&&v.sync_at!==v.updated_at);
   const slugs=new Set((await allVisits()).filter(v=>v.bezoeker===wie).map(v=>v.slug));
   const ms=(await allMedia()).filter(m=>slugs.has(m.slug)&&!m.sync);
   return{vs,ms};
