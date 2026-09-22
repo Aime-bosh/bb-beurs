@@ -310,7 +310,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-22 v14';
+const APP_BUILD='2026-09-22 v15';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -554,7 +554,7 @@ function renderMedia(){
     const d=document.createElement('div');d.className='item';
     if(m.soort==='kaartje'){const url=URL.createObjectURL(m.blob);d.innerHTML=`<img src="${url}" alt="kaartje"><span>kaartje</span>`;f.appendChild(d)}
     else{const url=URL.createObjectURL(m.blob);const kort=m.klok_s&&m.klok_s-m.duur_s>15;d.innerHTML=`<span>${m.soort==='gesprek'?'Gesprek':'Voicenote'} · ${kort?'<b style="color:var(--zalm-d)">onderbroken: '+fmt(m.duur_s)+' van '+fmt(m.klok_s)+'</b>':fmt(m.duur_s)}</span><audio controls src="${url}" style="height:32px;max-width:160px"></audio>`;a.appendChild(d)}
-    const x=document.createElement('button');x.textContent='✕';x.title='Verwijder';x.onclick=async()=>{if(confirm('Dit bestand verwijderen?')){await delMedia(m.id);mediaLijst=mediaLijst.filter(z=>z.id!==m.id);renderMedia()}};d.appendChild(x);
+    const x=document.createElement('button');x.textContent='✕';x.title='Verwijder';x.onclick=async()=>{if(confirm('Dit bestand verwijderen?')){await delMedia(m.id);mediaLijst=mediaLijst.filter(z=>z.id!==m.id);if(opname&&opname.slug===m.slug){opname.heeft_media=mediaLijst.length>0;bewaarConcept()}renderMedia()}};d.appendChild(x); // zonder opname is de stand weer open
   }
 }
 function fmt(s){s=Math.round(s||0);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
