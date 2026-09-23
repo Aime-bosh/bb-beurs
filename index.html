@@ -316,7 +316,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-23 v22';
+const APP_BUILD='2026-09-23 v23';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -541,7 +541,8 @@ function renderStand(){
   </div>
   <div class="blok"><h2>Notitie</h2>
     <textarea class="veld" id="notitie" placeholder="Kort: wat speelt er, wie beslist, volgende stap">${esc(v.notitie)}</textarea>
-  </div>`;
+  </div>
+  ${(v.bezocht||v.heeft_media||v.plaud_sinds||v.contact_naam||v.notitie)?'<div class="blok" style="border-top:0;padding-top:4px"><button class="pil" id="btnWisBezoek" style="color:var(--zalm-d);border-color:var(--zalm-d)">Dit bezoek wissen</button><div class="hint">Voor een test of een vergissing. Maakt deze stand weer open, ook bij de collega\'s. Opnames en foto\'s van deze stand gaan mee weg.</div></div>':''}`;
   el.querySelectorAll('#opnamekeuze .pil').forEach(b=>b.onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}const nu=new Date().toISOString();const op=b.dataset.op;
     if(op==='telefoon'){v.opname=v.opname==='telefoon'?'geen':'telefoon';ls('opname_'+wie,v.opname);herteken();bewaarConcept();return}
     if(op==='geen'){v.opname='geen';ls('opname_'+wie,'geen');if(v.plaud_sinds&&!v.plaud_tot)v.plaud_tot=nu;herteken();bewaarConcept();return}
@@ -556,7 +557,21 @@ function renderStand(){
 
   $('#btnScan').onclick=startScan;
   $('#foto').onchange=e=>fotoKaartje(e.target.files[0]);
+  const wis=$('#btnWisBezoek');if(wis)wis.onclick=wisBezoek;
   renderMedia();toonTeamMelding();
+}
+// Een test of een vergissing terugdraaien: alles van deze stand op dit toestel leegmaken en een leeg
+// record doorsturen. De teamlaag neemt per stand het nieuwste bestand, dus de stand wordt bij iedereen
+// weer open zonder dat er iets uit de back-up verwijderd hoeft te worden.
+async function wisBezoek(){
+  if(recorder){toast('Stop eerst de opname');return}if(!huidig||!opname)return;
+  if(!confirm(`Alles van ${huidig.naam} wissen op dit toestel, en de stand weer open zetten?`))return;
+  for(const m of mediaLijst){try{await delMedia(m.id)}catch(e){}}mediaLijst=[];
+  const nu=new Date().toISOString();
+  Object.assign(opname,{bezocht:false,contact_naam:'',contact_functie:'',contact_email:'',contact_tel:'',qr_raw:'',interesse:'',notitie:'',opgeslagen_om:null,bezig_sinds:null,plaud_sinds:null,plaud_tot:null,heeft_media:false,gewist_om:nu,updated_at:nu});
+  try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}
+  renderStand();renderLijst();toast('Gewist, stand staat weer open');
+  if(ghToken()){stuurBezig(opname)}
 }
 // Elke hertekening leest eerst wat er op het scherm staat. Zonder dit wiste een klik op
 // een opnameknop of opnamekeuze alles wat getypt of gescand was maar nog niet opgeslagen.
@@ -756,7 +771,7 @@ let syncBezig=false,syncStatus={op:'',fout:'',wacht:0,geteld:false};const syncLo
 function logSync(t){syncLog.push(new Date().toLocaleTimeString('nl-BE')+' '+t);if(syncLog.length>40)syncLog.shift()}
 async function telRij(){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.geteld=true;toonVeilig();return q}
 async function wachtrij(){
-  const vs=(await allVisits()).filter(v=>v.updated_at&&v.bezoeker===wie&&!v._team&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media||v.bezig_sinds||v.plaud_sinds)&&v.sync_at!==v.updated_at);
+  const vs=(await allVisits()).filter(v=>v.updated_at&&v.bezoeker===wie&&!v._team&&(v.bezocht||v.contact_naam||v.notitie||v.contact_email||v.qr_raw||v.heeft_media||v.bezig_sinds||v.plaud_sinds||v.gewist_om)&&v.sync_at!==v.updated_at);
   const slugs=new Set((await allVisits()).filter(v=>v.bezoeker===wie).map(v=>v.slug));
   const ms=(await allMedia()).filter(m=>slugs.has(m.slug)&&!m.sync);
   return{vs,ms};
