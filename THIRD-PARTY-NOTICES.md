@@ -14,13 +14,13 @@ De volledige licentieteksten staan in de map [`licenses/`](licenses/). De twee b
 
 ## Logo's van standhouders
 
-De afbeeldingen in `logos/` zijn de logo's van de bedrijven die op de beurs staan. Ze zijn en blijven eigendom van die bedrijven. Ze komen van de publieke exposantenpagina's van de beurs en zijn verkleind tot hoogstens 192 pixels. De app gebruikt ze alleen om een stand in de lijst en op het grondplan te herkennen. Dat een logo hier staat, betekent niet dat het bedrijf klant of partner van Bosh & Bordon is.
+De afbeeldingen in `logos/` en in `beurzen/<beurs>/logos/` zijn de logo's van de bedrijven die op de beurs staan. Ze zijn en blijven eigendom van die bedrijven. Ze komen van de publieke exposantenpagina's van de beurs en zijn verkleind tot hoogstens 192 pixels. De app gebruikt ze alleen om een stand in de lijst en op het grondplan te herkennen. Dat een logo hier staat, betekent niet dat het bedrijf klant of partner van Bosh & Bordon is.
 
 Wilt u uw logo hier weg? Stuur één bericht naar aime@boshandbordon.be en het wordt verwijderd.
 
 ## Gegevens van de beursorganisator
 
-`data.js` bevat per standhouder de naam, het standnummer, de categorie, de gemeente en de eerste zin van de eigen beschrijving, zoals die publiek op [empack.be](https://www.empack.be) en [transport-logistics.be](https://www.transport-logistics.be) staan. `plan.js` is afgeleid van het publieke vloerplan van Easyfairs. Die gegevens zijn van Easyfairs en van de standhouders. Ze staan hier alleen voor het bezoek aan deze ene beurs. De verdeling over bezoekers is van Bosh & Bordon.
+`data.js` bevat per standhouder de naam, het standnummer, de categorie, de gemeente en de eerste zin van de eigen beschrijving, zoals die publiek op [empack.be](https://www.empack.be) en [transport-logistics.be](https://www.transport-logistics.be) staan. `plan.js` is afgeleid van het publieke vloerplan van Easyfairs. Voor de volgende beurzen staan dezelfde gegevens in `beurzen/<beurs>/`: Abiss Kortrijk 2026 uit [abissummit.be](https://www.abissummit.be) en de publieke plattegrond van Kortrijk Xpo, Bilt Gent 2026 uit [bilt.living](https://www.bilt.living) en het publieke beursplan van de organisator. Die gegevens zijn van de organisatoren en van de standhouders. Ze staan hier alleen voor het bezoek aan die beurzen. De verdeling over bezoekers is van Bosh & Bordon.
 
 Er staat geen e-mailadres, geen naam van een persoon en geen enkel bezoek in deze repository.
 

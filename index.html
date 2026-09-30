@@ -53,6 +53,7 @@ button{cursor:pointer}
 .inhoud{padding:18px 18px 130px;flex:1}
 .banner{background:var(--zalm);color:var(--wit);padding:14px 18px;font-size:16px}
 .banner b{display:block;font-weight:700}
+.beurskeuze{width:100%;padding:13px 44px 10px 20px;border:1.5px solid var(--inkt);border-radius:999px;background:var(--inkt);color:#fff;font:inherit;font-weight:700;margin-bottom:10px;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,#fff 50%),linear-gradient(135deg,#fff 50%,transparent 50%);background-position:calc(100% - 24px) 55%,calc(100% - 18px) 55%;background-size:6px 6px;background-repeat:no-repeat}
 .zoek{width:100%;padding:15px 20px 11px;border:1.5px solid var(--inkt);border-radius:999px;background:var(--wit);margin-bottom:12px;outline:none}
 .zoek:focus{border-color:var(--zalm)}
 .schakel{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
@@ -138,7 +139,9 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 .schakel.gelijk .pil{flex:1 1 0;min-width:0;padding-left:4px;padding-right:4px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
 #lijst .knoppen{margin-bottom:10px}
 #lijst .knop.plan{border-color:var(--zalm-d);color:var(--zalm-d)}
-.planrij{padding:8px 18px 0;border-bottom:1px solid var(--lijn);background:var(--wit)}
+.planrij .pil{min-height:36px;padding-top:7px;padding-bottom:5px}
+.planrij .schakel.gelijk{margin-bottom:8px}
+.planrij{padding:6px 14px 0;border-bottom:1px solid var(--lijn);background:var(--wit)}
 .keuze3 .pil.plaud.aan{background:var(--wit);color:var(--zalm-d);border-color:var(--zalm-d)}
 .rij .stat{color:var(--zalm-d);font-weight:600;text-transform:none;letter-spacing:0}
 .rij.bezocht .stat{color:var(--groen)}
@@ -232,10 +235,12 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
     </div>
     <div class="inhoud">
       <div class="veilig" id="veilig"></div>
+      <select id="beursKeuze" class="beurskeuze" aria-label="Beurs"></select>
       <input id="zoek" class="zoek" type="search" placeholder="Zoek bedrijf of standnummer" autocomplete="off">
       <div class="knoppen"><button class="knop plan" id="btnPlan">Grondplan</button><button class="knop" id="btnPitch">Pitch</button></div>
       <div class="schakel gelijk" id="filters"><button class="pil aan" id="filterOpen">Open</button><button class="pil" id="filterAlle">Alle</button><button class="pil" id="filterMijn">Mijn bezoeken</button></div>
       <div class="schakel gelijk" id="prioFilter"><button class="pil aan" data-prio="">Alle</button><button class="pil" data-prio="A">A</button><button class="pil" data-prio="B">B</button><button class="pil" data-prio="C">C</button></div>
+      <div class="schakel gelijk" id="halFilter" style="display:none"></div>
       <div id="rijen"></div>
     </div>
   </section>
@@ -261,6 +266,7 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
   <div class="kop"><img class="merk" src="symbool-wit.svg" alt=""><h1>Grondplan</h1><button id="btnPlanAlles">Alles</button><button id="btnPlanMijn">Laatste</button><button id="btnPlanDicht" aria-label="Sluiten">✕</button></div>
   <div class="legende" id="legende"></div>
   <div class="planrij"><div class="schakel gelijk" id="planPrio"><button class="pil aan" data-prio="">Alle</button><button class="pil" data-prio="A">A</button><button class="pil" data-prio="B">B</button><button class="pil" data-prio="C">C</button></div></div>
+  <div class="planrij" id="planHalRij" style="display:none"><div class="schakel gelijk" id="planHal"></div></div>
   <div id="planvlak"><div class="planteller" id="planteller"></div><div class="planknoppen"><button id="btnZoomIn" aria-label="Inzoomen">+</button><button id="btnZoomUit" aria-label="Uitzoomen">−</button></div><canvas id="plancanvas"></canvas></div>
   <div id="planblad"></div>
 </div>
@@ -279,22 +285,35 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 
 <script src="jsqr.min.js"></script>
 <script src="fflate.min.js"></script>
-<script src="data.js"></script>
-<script src="plan.js"></script>
+<script src="beurzen.js"></script>
+<script>
+// Welke beurs: de keuze op dit toestel, anders de eerstvolgende op datum. Daarna pas data.js en plan.js van
+// die beurs, zodat STANDEN en PLAN gewoon vast blijven. Wisselen = keuze bewaren en herladen.
+(function(){var L=window.BEURZEN||[],k=null;try{k=localStorage.getItem('beurs')}catch(e){}
+var nu=new Date().toISOString().slice(0,10);
+var b=L.filter(function(x){return x.slug===k})[0]||L.filter(function(x){return x.tot>=nu})[0]||L[L.length-1]||{slug:'',map:'.',oud:true,titel:'Beurs'};
+window.BEURS=b;window.BP=b.oud?'':b.slug+'/';window.LSP=b.oud?'':b.slug+':';window.DBNAAM=b.oud?'bbbeurs':'bbbeurs-'+b.slug;
+document.write('<script src="'+b.map+'/data.js"><\/script><script src="'+b.map+'/plan.js"><\/script>');})();
+</script>
 <script>
 (function(){
 'use strict';
 const $=s=>document.querySelector(s);
 const STANDEN=(window.STANDEN||[]).slice().sort((a,b)=>standSort(a.stand)-standSort(b.stand)||a.naam.localeCompare(b.naam));
+// Logo's van een nieuwe beurs staan in haar eigen map.
+if(window.BEURS&&!BEURS.oud)STANDEN.forEach(s=>{if(s.logo&&!/^(https?:)?\/\//.test(s.logo))s.logo=BEURS.map+'/'+s.logo});
 // Prioriteit en vooraf-contact staan niet in de publieke data. Ze komen uit de private repo, met de back-upsleutel,
 // en worden op het toestel bewaard zodat ze ook zonder netwerk zichtbaar blijven.
-function pasPriveToe(){let p={};try{p=JSON.parse(ls('prive')||'{}')||{}}catch(e){}for(const s of STANDEN){const x=p[s.slug]||{};s.prio=x.prio||'';s.spoor=x.spoor||''}}
+function pasPriveToe(){let p={};try{p=JSON.parse(lsB('prive')||'{}')||{}}catch(e){}for(const s of STANDEN){const x=p[s.slug]||{};s.prio=x.prio||'';s.spoor=x.spoor||'';s.haak=x.haak||'';if(x.beslisser){s.beslisser=x.beslisser;s.functie=x.functie||''}}}
 pasPriveToe(); // meteen bij het laden, vóór de lijst getekend wordt
 async function haalPrive(){
+  // Alleen bij het testen op de eigen Mac (localhost), zonder sleutel: een lokale kopie van de privélaag.
+  // Dat bestand staat niet in git en dus nooit op de publieke site.
+  if(!ghToken()&&location.hostname==='localhost'){try{const a=await fetch(`${(window.BEURS&&BEURS.map)||'.'}/_lokaal-prive.json`,{cache:'no-store'});if(a.ok){const tekst=await a.text();JSON.parse(tekst);if(tekst!==lsB('prive')){lsB('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}}}catch(e){}return}
   if(!ghToken()||!navigator.onLine)return;
-  try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/_app/standen-prive.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
+  try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${window.BP||''}_app/standen-prive.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
     if(a.status!==200)return;const tekst=await a.text();JSON.parse(tekst);
-    if(tekst!==ls('prive')){ls('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}
+    if(tekst!==lsB('prive')){lsB('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}
   }catch(e){}
 }
 // De pitch staat ook in de private repo, zodat hij niet publiek is en kan wijzigen zonder nieuwe appversie.
@@ -316,7 +335,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-09-23 v23';
+const APP_BUILD='2026-10-01 v28';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -324,8 +343,8 @@ const APP_BUILD='2026-09-23 v23';
 // eigen bezoeken: nooit in de visits-opslag en nooit in het geheugenobject `visits`, want
 // alles wat daarin zit, wordt als eigen concept bewaard en onder de eigen naam doorgestuurd.
 let team={},teamCache={etag:'',paden:{},data:{}},teamBezig=false;
-try{const c=JSON.parse(ls('team')||'null');if(c&&c.data&&typeof c.data==='object'){teamCache=c;team=c.data}}catch(e){}
-const TEAMPAD=/^(Lorenzo|Stijn|Peter)\/([^/]+)\/visit-[^/]+\.json$/;
+try{const c=JSON.parse(lsB('team')||'null');if(c&&c.data&&typeof c.data==='object'){teamCache=c;team=c.data}}catch(e){}
+const TEAMPAD=new RegExp('^'+(window.BP||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(Lorenzo|Stijn|Peter)/([^/]+)/visit-[^/]+\\.json$');
 const BEZIG_MS=30*60000;
 function metTimeout(url,opties,ms){const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);return fetch(url,Object.assign({},opties,{signal:ctl.signal})).finally(()=>clearTimeout(t))}
 async function haalTeam(){
@@ -347,7 +366,7 @@ async function haalTeam(){
       if(b.status!==200)return;const v=JSON.parse(await b.text());if(!v||typeof v!=='object')return;
       (data[n.slug]=data[n.slug]||[]).push({bezoeker:n.bezoeker,bezocht:!!v.bezocht,bezig_sinds:v.bezig_sinds||null,opgeslagen_om:v.opgeslagen_om||null,updated_at:v.updated_at||null,contact_naam:v.contact_naam||'',notitie:v.notitie||'',heeft_media:!!v.heeft_media,plaud_sinds:v.plaud_sinds||null,interesse:v.interesse||'',_team:true});
     }catch(e){}}))}
-    teamCache={etag:a.headers.get('etag')||'',paden,data};team=data;ls('team',JSON.stringify(teamCache));
+    teamCache={etag:a.headers.get('etag')||'',paden,data};team=data;lsB('team',JSON.stringify(teamCache));
     logSync('team '+Object.keys(data).length+' standen, '+ophalen.length+' nieuw, rest '+(a.headers.get('x-ratelimit-remaining')||'?'));
     try{renderLijst();if($('#plan').classList.contains('actief'))tekenPlan();toonTeamMelding()}catch(e){}
   }catch(e){logSync('team fout '+(e&&e.message||e))}finally{teamBezig=false}
@@ -381,7 +400,7 @@ function standSort(s){const m=String(s||'').match(/\d+/);return m?parseInt(m[0],
 
 // ── opslag ────────────────────────────────────────────────────────────
 let db;
-function openDB(){return new Promise((ok,nee)=>{const r=indexedDB.open('bbbeurs',1);
+function openDB(){return new Promise((ok,nee)=>{const r=indexedDB.open(window.DBNAAM||'bbbeurs',1);
   r.onupgradeneeded=e=>{const d=e.target.result;d.createObjectStore('visits',{keyPath:'slug'});const m=d.createObjectStore('media',{keyPath:'id',autoIncrement:true});m.createIndex('slug','slug')};
   r.onsuccess=e=>{db=e.target.result;ok(db)};r.onerror=()=>nee(r.error)})}
 function tx(store,mode,fn){return new Promise((ok,nee)=>{const t=db.transaction(store,mode);const s=t.objectStore(store);const req=fn(s);t.oncomplete=()=>ok(req&&req.result);t.onerror=()=>nee(t.error)})}
@@ -394,9 +413,11 @@ const putMedia=m=>tx('media','readwrite',s=>s.put(m));
 const mediaVoor=slug=>tx('media','readonly',s=>s.index('slug').getAll(slug));
 const allMedia=()=>tx('media','readonly',s=>s.getAll());
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+// Per beurs: alles wat over standen gaat. Gedeeld: naam, sleutel, pitch, opnamekeuze. Empack houdt de oude sleutels.
+function lsB(k,v){return ls((window.LSP||'')+k,v)}
 
 // ── toestand ──────────────────────────────────────────────────────────
-let wie=ls('wie'), filter='open', prioFilter=ls('prio_filter')||'', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
+let wie=ls('wie'), filter='open', prioFilter=lsB('prio_filter')||'', zoek='', huidig=null, visits={}, mediaLijst=[], opname=null, recorder=null, recChunks=[], recSoort=null, recStart=0, recTimer=null, stream=null, scanStream=null, scanLoop=null;
 
 function toast(t,ms){const e=$('#toast');e.textContent=t;e.classList.add('zichtbaar');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('zichtbaar'),ms||2200)}
 function standalone(){return window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches}
@@ -419,7 +440,18 @@ async function start(){
   if(!wie){$('#kies').style.display='flex';document.querySelectorAll('#kies [data-wie]').forEach(b=>b.onclick=()=>{wie=b.dataset.wie;ls('wie',wie);$('#kies').style.display='none';toonApp()});return}
   toonApp();
 }
+// Beurskeuze: bewaren en herladen. Niet zolang er nog iets van deze beurs moet vertrekken: de wachtrij
+// leest alleen de opslag van de gekozen beurs, dus wat blijft staan, zou pas vertrekken als je terugwisselt.
+function zetBeursKeuze(){const el=$('#beursKeuze');if(!el)return;const L=window.BEURZEN||[];
+  el.innerHTML=L.map(b=>`<option value="${esc(b.slug)}"${window.BEURS&&b.slug===BEURS.slug?' selected':''}>${esc(b.titel)}</option>`).join('');
+  el.style.display=L.length>1?'block':'none';
+  el.onchange=async()=>{const nieuw=el.value;el.value=BEURS.slug;if(recorder){toast('Stop eerst de opname');return}
+    const q=await wachtrij();if(q.vs.length+q.ms.length){toast(`Eerst versturen: ${q.vs.length+q.ms.length} items van ${BEURS.titel} wachten nog`,3500);synchroniseer();return}
+    if(huidig&&$('#cNaam')){leesVelden();try{await putVisit(opname)}catch(e){}}
+    ls('beurs',nieuw);lsB('huidig','');location.reload()}}
 async function toonApp(){
+  zetBeursKeuze();
+  zetHalKnoppen();
   $('#app').style.display='grid';
   document.title=BEURS_INFO.titel||'Beurs';
   await herlaadVisits();
@@ -428,7 +460,7 @@ async function toonApp(){
   haalPrive();
   haalPitch();
   haalTeam();
-  const terug=ls('huidig');if(terug){const st=STANDEN.find(x=>x.slug===terug);if(st)openStand(st)}
+  const terug=lsB('huidig');if(terug){const st=STANDEN.find(x=>x.slug===terug);if(st)openStand(st)}
   haalLogosVooraf();
 }
 // Elke 20 s kijken: een 304 (niets nieuws) telt bij GitHub niet mee voor de limiet, dus dat is goedkoop.
@@ -449,6 +481,7 @@ function zichtbareStanden(){
     if(filter==='open'){const st=statusVan(s.slug);if(st.bezocht||st.bezig||st.begonnen)return false}
     if(filter==='mijn'){const st=statusVan(s.slug);if(!(st.door.includes(wie)||st.doorBegonnen.includes(wie)))return false}
     if(prioFilter&&s.prio!==prioFilter)return false;
+    if(halFilter&&s.hal!==halFilter)return false;
     if(q&&!(s.naam.toLowerCase().includes(q)||String(s.stand).toLowerCase().includes(q)))return false;
     return true;
   });
@@ -456,7 +489,7 @@ function zichtbareStanden(){
 function renderLijst(){
   toonVeilig();
   const lijst=zichtbareStanden();
-  let teamGedaan=0,mijnGedaan=0,tot=0;for(const s of STANDEN){if(prioFilter&&s.prio!==prioFilter)continue;tot++;const st=statusVan(s.slug);if(st.bezocht)teamGedaan++;if(st.door.includes(wie))mijnGedaan++}
+  let teamGedaan=0,mijnGedaan=0,tot=0;for(const s of STANDEN){if(prioFilter&&s.prio!==prioFilter)continue;if(halFilter&&s.hal!==halFilter)continue;tot++;const st=statusVan(s.slug);if(st.bezocht)teamGedaan++;if(st.door.includes(wie))mijnGedaan++}
   $('#lijsttitel').innerHTML=`<span class="wie">${esc(wie)} · team</span>${teamGedaan}/${tot} · jij ${mijnGedaan}`;
   const el=$('#rijen');el.innerHTML='';
   if(!lijst.length){el.innerHTML='<div class="leeg">Niets gevonden.</div>';return}
@@ -472,15 +505,26 @@ function renderLijst(){
 $('#zoek').oninput=e=>{zoek=e.target.value;renderLijst()};
 for(const [id,f] of [['#filterMijn','mijn'],['#filterAlle','alle'],['#filterOpen','open']]){$(id).onclick=()=>{filter=f;document.querySelectorAll('#filters .pil').forEach(p=>p.classList.remove('aan'));$(id).classList.add('aan');renderLijst()}}
 // Eén prioriteitsfilter voor lijst en grondplan: A eerst, dan B, C laatst. Blijft bewaard op het toestel.
-function zetPrio(pr){prioFilter=pr;ls('prio_filter',pr);document.querySelectorAll('#prioFilter .pil, #planPrio .pil').forEach(b=>b.classList.toggle('aan',b.dataset.prio===pr));renderLijst();tekenPlan()}
+// Halkeuze: alleen als de beurs hallen heeft (veld `hal` per stand, Bilt). Eén instelling voor lijst en plan;
+// op het plan zoomt een hal meteen in op haar standen.
+const HALLEN=[...new Set(STANDEN.map(s=>s.hal).filter(Boolean))].sort();
+let halFilter=HALLEN.includes(lsB('hal_filter'))?lsB('hal_filter'):'';
+function zetHalKnoppen(){if(!HALLEN.length)return;const h=['<button class="pil" data-hal="">Alle</button>'].concat(HALLEN.map(x=>`<button class="pil" data-hal="${esc(x)}">${HALLEN.length>5?esc(x):'Hal '+esc(x)}</button>`)).join('');
+  for(const id of ['#halFilter','#planHal']){const el=$(id);el.innerHTML=h;el.querySelectorAll('.pil').forEach(b=>b.onclick=()=>zetHal(b.dataset.hal))}
+  $('#halFilter').style.display='flex';$('#planHalRij').style.display='block';zetHal(halFilter,true)}
+function zetHal(h,stil){halFilter=h;lsB('hal_filter',h);document.querySelectorAll('#halFilter .pil, #planHal .pil').forEach(b=>b.classList.toggle('aan',b.dataset.hal===h));
+  if(stil)return;renderLijst();if($('#plan').classList.contains('actief')){const z=h?zoneVan(x=>perSlug[x]&&perSlug[x].hal===h):null;pasOverzicht()}}
+function zetPrio(pr){prioFilter=pr;lsB('prio_filter',pr);document.querySelectorAll('#prioFilter .pil, #planPrio .pil').forEach(b=>b.classList.toggle('aan',b.dataset.prio===pr));renderLijst();tekenPlan()}
 document.querySelectorAll('#prioFilter .pil, #planPrio .pil').forEach(b=>b.onclick=()=>zetPrio(b.dataset.prio));
-function kortBeurs(b){return /empack/i.test(b)?'Empack':/transport/i.test(b)?'Transport & Logistics':b}
+// Productgroepen: de eerste drie, anders wordt de kaart een lijst (Abiss geeft er tot vijftien).
+function kortCat(c){const d=String(c).split(' · ');return d.length>3?d.slice(0,3).join(' · ')+' · +'+(d.length-3):c}
+function kortBeurs(b){return /abiss/i.test(b)?'Abiss':/empack/i.test(b)?'Empack':/transport/i.test(b)?'Transport & Logistics':b}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 // ── stand ─────────────────────────────────────────────────────────────
 async function openStand(s){
   if(recorder){toast('Stop eerst de opname');return}
-  huidig=s;ls('huidig',s.slug);
+  huidig=s;lsB('huidig',s.slug);
   const v=visits[s.slug]||{slug:s.slug,bezoeker:wie,bezocht:false,contact_naam:'',contact_functie:'',contact_email:'',contact_tel:'',qr_raw:'',interesse:'',notitie:'',opname:null,geopend_om:null,opgeslagen_om:null};
   if(!v.geopend_om)v.geopend_om=new Date().toISOString();
   v.opname=v.opname||ls('opname_'+wie)||'telefoon';if(v.opname==='plaud')v.opname='telefoon';
@@ -500,11 +544,12 @@ function renderStand(){
   el.innerHTML=`
   <div id="teammelding" class="waarsch" style="display:none"></div>
   <div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(s.stand)}</span> ${s.prio?'<span class="badge">prio '+esc(s.prio)+'</span>':''}
-    <h2>${esc(s.naam)}</h2></div>${s.logo?'<div class="logo"><img src="'+esc(s.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div><div class="meta">${esc(s.beurs)}${s.gemeente?' · '+esc(s.gemeente):''}${s.categorie?' · '+esc(s.categorie):''}</div>
+    <h2>${esc(s.naam)}</h2></div>${s.logo?'<div class="logo"><img src="'+esc(s.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div><div class="meta">${esc(s.beurs)}${s.gemeente?' · '+esc(s.gemeente):''}${s.categorie?' · '+esc(kortCat(s.categorie)):''}</div>
     ${s.wat_ze_doen?'<div class="doen">'+esc(s.wat_ze_doen)+'</div>':''}
+    ${s.haak?'<div class="doen"><b>Haak:</b> '+esc(s.haak)+'</div>':''}
     ${s.beslisser?'<div class="doen"><b>Vraag naar:</b> '+esc(s.beslisser)+(s.functie?' ('+esc(s.functie)+')':'')+'</div>':''}
     ${s.spoor?'<div class="meta">Vooraf: '+esc(s.spoor)+'</div>':''}
-    ${(window.PLAN&&PLAN.bron[s.slug])?'<button class="naarplan" id="btnToonPlan">Toon op grondplan'+(PLAN.bron[s.slug]==='zone'?' (zone)':'')+'</button>':'<div class="meta" style="margin-top:12px">Deze stand staat niet op het grondplan van Easyfairs.</div>'}
+    ${(window.PLAN&&PLAN.bron[s.slug])?'<button class="naarplan" id="btnToonPlan">Toon op grondplan'+(PLAN.bron[s.slug]==='zone'?' (zone)':'')+'</button>':'<div class="meta" style="margin-top:12px">Deze stand staat niet op het grondplan.</div>'}
   </div>
   <div class="blok"><h2>Opname</h2>
     <div class="keuze3" id="opnamekeuze">
@@ -661,7 +706,7 @@ async function toggleRec(soort,btn){
 async function stuurBezig(v){
   if(!ghToken()||!navigator.onLine||!v||!v.updated_at)return;
   try{const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;
-    await ghPut(`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
+    await ghPut(`${window.BP||''}${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
     const vers=await getVisit(v.slug);if(vers&&vers.updated_at===v.updated_at){vers.sync_at=v.updated_at;await putVisit(vers);visits[v.slug]=vers;if(opname&&opname.slug===v.slug)opname.sync_at=v.updated_at}
   }catch(e){logSync('bezig later via de rij: '+(e&&e.message||e))}
 }
@@ -730,10 +775,10 @@ $('#btnOpslaan').onclick=async()=>{
   await putVisit(v);visits[v.slug]=v;
   toast('Bewaard');if(ghToken()){telRij().then(()=>synchroniseer())}
   // Geen vaste route meer: na het opslaan toont het grondplan wat rondom nog open is.
-  const slug=huidig.slug;huidig=null;ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');$('#standinhoud').innerHTML='<div class="leeg">Kies een stand in de lijst of op het grondplan.</div>';$('#voet').style.display='none';renderLijst();
+  const slug=huidig.slug;huidig=null;lsB('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');$('#standinhoud').innerHTML='<div class="leeg">Kies een stand in de lijst of op het grondplan.</div>';$('#voet').style.display='none';renderLijst();
   if(PLAN&&PLAN.bron&&PLAN.bron[slug])openPlan(null,slug);else{toast('Bewaard. Deze stand staat niet op het grondplan');openPlan(null)}
 };
-$('#btnTerug').onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}if(huidig&&$('#cNaam')){leesVelden();if(opname.bezig_sinds){opname.bezig_sinds=null;opname.updated_at=new Date().toISOString()}try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}}ls('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();haalTeam()};
+$('#btnTerug').onclick=async()=>{if(recorder){toast('Stop eerst de opname');return}if(huidig&&$('#cNaam')){leesVelden();if(opname.bezig_sinds){opname.bezig_sinds=null;opname.updated_at=new Date().toISOString()}try{await putVisit(opname);visits[opname.slug]=opname}catch(e){}}lsB('huidig','');$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();haalTeam()};
 window.addEventListener('pagehide',()=>{if(huidig&&opname){try{leesVelden();putVisit(opname)}catch(e){}}});
 
 // ── back-up naar een private GitHub-repo ───────────────────────────────
@@ -781,10 +826,10 @@ async function synchroniseer(){
   syncBezig=true;let gelukt=0;syncStatus.fout='';
   try{
     const{vs,ms}=await telRij();
-    for(const m of ms){const st=perSlug[m.slug]||{};const pad=`${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;
+    for(const m of ms){const st=perSlug[m.slug]||{};const pad=`${window.BP||''}${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;
       await ghPut(pad,await b64blob(m.blob));m.sync=new Date().toISOString();await putMedia(m);const i=mediaLijst.findIndex(x=>x.id===m.id);if(i>=0)mediaLijst[i].sync=m.sync;gelukt++;syncStatus.wacht=Math.max(0,syncStatus.wacht-1);toonVeilig()}
     for(const v of vs){const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;
-      await ghPut(`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
+      await ghPut(`${window.BP||''}${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at)}.json`,b64tekst(JSON.stringify(kopie,null,1)));
       const vers=await getVisit(v.slug);if(vers){vers.sync_at=v.updated_at;await putVisit(vers);visits[v.slug]=vers;if(opname&&opname.slug===v.slug)opname.sync_at=v.updated_at}gelukt++}
     syncStatus.op=new Date().toISOString();
   }catch(e){syncStatus.fout=e.message==='sleutel'?'sleutel ongeldig of vervallen':e.message==='netwerk'?'geen netwerk':e.message}
@@ -805,7 +850,7 @@ if(location.hash.includes('debug'))window.__bb={log:syncLog,status:syncStatus,sy
 setInterval(()=>synchroniseer(),45000);
 
 // ── veiligheid: wat staat alleen nog op dit toestel? ───────────────────
-function nietVerstuurd(){const sinds=ls('laatst_verstuurd')||'';return Object.values(visits).filter(v=>v.bezoeker===wie&&(v.bezocht||v.contact_naam||v.notitie)&&(v.updated_at||'')>sinds)}
+function nietVerstuurd(){const sinds=lsB('laatst_verstuurd')||'';return Object.values(visits).filter(v=>v.bezoeker===wie&&(v.bezocht||v.contact_naam||v.notitie)&&(v.updated_at||'')>sinds)}
 function toonVeilig(){
   const knop=$('#btnExport');const bol=$('#bol');const blok=$('#veilig');if(!knop)return;
   if(ghToken()){
@@ -836,7 +881,7 @@ function collegaKlasse(naam){const rest=COLLEGAS.filter(x=>x!==wie);const i=rest
 function standKlasse(st,nuSlug){
   const ss=st.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)return 'leeg';
   if(nuSlug&&st.slugs.includes(nuSlug))return 's nu';
-  if(prioFilter&&!ss.some(x=>x.prio===prioFilter))return 's buiten';
+  if((prioFilter&&!ss.some(x=>x.prio===prioFilter))||(halFilter&&!ss.some(x=>x.hal===halFilter)))return 's buiten';
   const sts=ss.map(x=>statusVan(x.slug));const gedaan=sts.filter(s=>s.bezocht).length;
   if(gedaan===ss.length)return 's klaar';
   if(gedaan>0)return 's deels';
@@ -848,12 +893,28 @@ function standKlasse(st,nuSlug){
 // Een SVG met 500 vormen en 200 teksten herberekent op een iPhone bij elke beweging, ook met
 // een CSS-transform erop. Een canvas tekent hetzelfde in enkele milliseconden per beeld, dus
 // slepen en knijpen volgen de vinger zonder tussenstap.
+// planRot: een brede hal op een staand scherm draait een kwartslag. De view rekent altijd in schermrichting (u,v);
+// alleen de omzetting van en naar het plan kent de draaiing: u = H - y, v = x. Tekst en logo's blijven rechtop.
+let planRot=false;
+const naarPlan=(u,v)=>planRot?[v,PLAN.h-u]:[u,v];
 let view={x:0,y:0,k:1},planNu=null,planGekozen=-1,planRaf=0,planGebaar=false;const logoCache={};
+// Onregelmatige stand (Abiss 18, een geknikte strook): het binnenvak komt rond het punt dat het verst van elke
+// rand ligt, gezocht op een raster. Anders staat het nummer naast de vorm.
+function ruimstePunt(o){const p=o.pts,b=o.b;const binnen=(x,y)=>{let r=false;for(let a=0,c=p.length-1;a<p.length;c=a++){if((p[a][1]>y)!==(p[c][1]>y)&&x<(p[c][0]-p[a][0])*(y-p[a][1])/(p[c][1]-p[a][1])+p[a][0])r=!r}return r};
+  const afst=(x,y)=>{let m=1e9;for(let a=0,c=p.length-1;a<p.length;c=a++){const[x1,y1]=p[c],[x2,y2]=p[a];const dx=x2-x1,dy=y2-y1;const l=dx*dx+dy*dy||1;const t=Math.max(0,Math.min(1,((x-x1)*dx+(y-y1)*dy)/l));m=Math.min(m,Math.hypot(x-x1-t*dx,y-y1-t*dy))}return m};
+  let best=null,bd=0;for(let i=1;i<24;i++)for(let j=1;j<24;j++){const x=b.x0+b.w*i/24,y=b.y0+b.h*j/24;if(!binnen(x,y))continue;const d=afst(x,y);if(d>bd){bd=d;best=[x,y]}}
+  if(!best)return o.b;const s=bd*1.3;return{x0:best[0]-s,y0:best[1]-s,x1:best[0]+s,y1:best[1]+s,w:2*s,h:2*s}}
 function planInit(){if(!PLAN||PLAN._ok)return;PLAN._ok=true;
-  const maak=o=>{const g=o.d.match(/-?[\d.]+/g).map(Number);o.pts=[];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<g.length;i+=2){o.pts.push([g[i],g[i+1]]);x0=Math.min(x0,g[i]);x1=Math.max(x1,g[i]);y0=Math.min(y0,g[i+1]);y1=Math.max(y1,g[i+1])}o.b={x0,y0,x1,y1,w:x1-x0,h:y1-y0};o.p=new Path2D(o.d)};
+  const maak=o=>{const g=o.d.match(/-?[\d.]+/g).map(Number);o.pts=[];let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(let i=0;i<g.length;i+=2){o.pts.push([g[i],g[i+1]]);x0=Math.min(x0,g[i]);x1=Math.max(x1,g[i]);y0=Math.min(y0,g[i+1]);y1=Math.max(y1,g[i+1])}o.b={x0,y0,x1,y1,w:x1-x0,h:y1-y0};o.p=new Path2D(o.d);
+    // Binnenvak voor logo en nummer. Een rechthoek raakt minstens twee hoeken van zijn kader; een schuine
+    // stand (Abiss: ruiten op 45°) raakt er geen, en dan past alleen het middelste kwart erin.
+    const hoek=o.pts.filter(([x,y])=>(Math.abs(x-x0)<.6||Math.abs(x-x1)<.6)&&(Math.abs(y-y0)<.6||Math.abs(y-y1)<.6)).length;
+    const w=x1-x0,h=y1-y0,cx=(x0+x1)/2,cy=(y0+y1)/2;o.vorm=hoek>=2?'recht':o.pts.length<=5?'ruit':'vrij';o.ib=hoek>=2?o.b:o.pts.length<=5?{x0:cx-w/4,y0:cy-h/4,x1:cx+w/4,y1:cy+h/4,w:w/2,h:h/2}:ruimstePunt(o)};
   PLAN.standen.forEach(maak);PLAN.achtergrond.forEach(maak);
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;PLAN.standen.concat(PLAN.achtergrond.filter(a=>a.k==='stand'||a.k==='zone')).forEach(a=>{x0=Math.min(x0,a.b.x0);y0=Math.min(y0,a.b.y0);x1=Math.max(x1,a.b.x1);y1=Math.max(y1,a.b.y1)});
-  PLAN.vloer={x:x0-35,y:y0-35,w:x1-x0+70,h:y1-y0+70};
+  PLAN.vloer={x:x0-35,y:y0-35,w:x1-x0+70,h:y1-y0+70};PLAN.eigenVloer=PLAN.achtergrond.some(a=>a.k==='vloer');
+  // Wat er echt getekend wordt (standen, vlakken, muren): daarop past het overzicht, niet op het kader met marges.
+  let i0=x0,j0=y0,i1=x1,j1=y1;PLAN.achtergrond.forEach(a=>{if(a.k==='vlak'||a.k==='lijn'||a.k==='vloer'){i0=Math.min(i0,a.b.x0);j0=Math.min(j0,a.b.y0);i1=Math.max(i1,a.b.x1);j1=Math.max(j1,a.b.y1)}});PLAN.inhoud={x0:i0,y0:j0,x1:i1,y1:j1};
   PLAN.achtergrond.forEach(a=>{if(a.k==='zone')a.gang=Math.min(a.b.w,a.b.h)<45&&Math.max(a.b.w,a.b.h)>300});
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(tekenPlan);
 }
@@ -861,29 +922,37 @@ const STIJL={'s open':['#ffffff','#14171c',2.5],'s mijn':['#ffffff','#14171c',2.
 function rondeRechthoek(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function logoVan(src){let im=logoCache[src];if(!im){im=logoCache[src]=new Image();im.onload=()=>tekenPlan();im.src=src}return im.complete&&im.naturalWidth?im:null}
 function tekenPlan(){if(planRaf||!PLAN)return;planRaf=requestAnimationFrame(()=>{planRaf=0;tekenNu()})}
+// Het binnenvak van een stand zoals het op het scherm staat: bij een gedraaid plan wisselen breedte en hoogte.
+function schermVak(b){const cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2;const w=planRot?b.h:b.w,h=planRot?b.w:b.h;return{cx,cy,w,h,x0:cx-w/2,x1:cx+w/2,y0:cy-h/2,y1:cy+h/2}}
 function tekenNu(){
   const c=$('#plancanvas'),vlak=$('#planvlak');if(!c||!$('#plan').classList.contains('actief'))return;planInit();
   const r=vlak.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,planGebaar?2:3);const W=Math.round(r.width*dpr),H=Math.round(r.height*dpr);
   if(c.width!==W||c.height!==H){c.width=W;c.height=H}
   const ctx=c.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#ecebe7';ctx.fillRect(0,0,W,H);
-  const k=view.k*dpr;ctx.setTransform(k,0,0,k,-view.x*k,-view.y*k);
-  const z={x0:view.x,y0:view.y,x1:view.x+r.width/view.k,y1:view.y+r.height/view.k};const zie=b=>!(b.x1<z.x0||b.x0>z.x1||b.y1<z.y0||b.y0>z.y1);
+  const k=view.k*dpr;ctx.setTransform(k,0,0,k,-view.x*k,-view.y*k);if(planRot)ctx.transform(0,1,-1,0,PLAN.h,0);
+  const u0=view.x,v0=view.y,u1=view.x+r.width/view.k,v1=view.y+r.height/view.k;
+  const z=planRot?{x0:v0,x1:v1,y0:PLAN.h-u1,y1:PLAN.h-u0}:{x0:u0,y0:v0,x1:u1,y1:v1};
+  // Gekozen hal met een omtrek (Bilt): alleen die hal, de rest valt weg.
+  const halVak=halFilter&&PLAN.hallen&&PLAN.hallen[halFilter];ctx.save();if(halVak){ctx.beginPath();ctx.rect(halVak[0],halVak[1],halVak[2]-halVak[0],halVak[3]-halVak[1]);ctx.clip()}const zie=b=>!(b.x1<z.x0||b.x0>z.x1||b.y1<z.y0||b.y0>z.y1);
   ctx.lineJoin='round';
   // gebouw
   ctx.fillStyle='#e3e2dd';ctx.strokeStyle='#d3d2cc';ctx.lineWidth=1.5;for(const a of PLAN.achtergrond){if((a.k==='hal'||a.k==='overig')&&zie(a.b)&&a.b.w<PLAN.w*2){ctx.fill(a.p);ctx.stroke(a.p)}}
   // beursvloer
-  const v=PLAN.vloer;if(!planGebaar){ctx.shadowColor='rgba(0,0,0,.16)';ctx.shadowBlur=14*k;ctx.shadowOffsetY=3*k}
-  rondeRechthoek(ctx,v.x,v.y,v.w,v.h,26);ctx.fillStyle='#fbfbf9';ctx.fill();ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#cfcec8';ctx.lineWidth=3;ctx.stroke();
+  const v=PLAN.vloer;if(!PLAN.eigenVloer){if(!halVak&&!planGebaar){ctx.shadowColor='rgba(0,0,0,.16)';ctx.shadowBlur=14*k;ctx.shadowOffsetY=3*k}
+  rondeRechthoek(ctx,v.x,v.y,v.w,v.h,26);ctx.fillStyle='#fbfbf9';ctx.fill();ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.strokeStyle='#cfcec8';ctx.lineWidth=3;ctx.stroke()}
+  // Vlakken en lijnen van het plan van de organisator zelf (hallen in hun kleur, bars, zones, muren), in hun volgorde.
+  for(const a of PLAN.achtergrond){if(!zie(a.b))continue;if(a.k==='vloer'){ctx.fillStyle='#fbfbf9';ctx.fill(a.p)}else if(a.k==='vlak'){ctx.fillStyle=a.f;ctx.fill(a.p)}else if(a.k==='lijn'){ctx.strokeStyle=a.c||'#14171c';ctx.lineWidth=a.w||2;ctx.stroke(a.p)}}
   // gangen en zones
   for(const a of PLAN.achtergrond){if(a.k!=='zone'||!zie(a.b))continue;if(a.gang){ctx.fillStyle='#fde4df';ctx.fill(a.p)}else{ctx.fillStyle='#fdf0ed';ctx.fill(a.p);ctx.setLineDash([6,5]);ctx.strokeStyle='#f3b3a9';ctx.lineWidth=1.5;ctx.stroke(a.p);ctx.setLineDash([])}}
   // standen die niet op onze lijst staan
   let st=STIJL.leeg;ctx.fillStyle=st[0];ctx.strokeStyle=st[1];ctx.lineWidth=st[2];for(const a of PLAN.achtergrond){if(a.k==='stand'&&zie(a.b)){ctx.fill(a.p);ctx.stroke(a.p)}}
   // labels
   ctx.textAlign='center';ctx.textBaseline='middle';
-  for(const l of PLAN.labels){const t=l.t.toUpperCase();
-    if(l.k==='hal'){ctx.save();ctx.translate(l.x,l.y);ctx.rotate(-Math.PI/2);ctx.font="800 54px 'League Spartan',sans-serif";ctx.fillStyle='rgba(20,23,28,.07)';ctx.fillText(t,0,0);ctx.restore()}
+  for(const l of PLAN.labels){const t=l.t.toUpperCase();ctx.save();if(planRot){ctx.translate(l.x,l.y);ctx.rotate(-Math.PI/2);ctx.translate(-l.x,-l.y)}
+    if(l.k==='tekst'){ctx.save();ctx.translate(l.x,l.y);if(l.r)ctx.rotate(l.r*Math.PI/180);ctx.font=`700 ${l.s||16}px 'League Spartan',sans-serif`;ctx.fillStyle=l.c||'#3a3a3a';ctx.fillText(l.t,0,1);ctx.restore()}
+    else if(l.k==='hal'){ctx.save();ctx.translate(l.x,l.y);ctx.rotate(-Math.PI/2);ctx.font="800 54px 'League Spartan',sans-serif";ctx.fillStyle='rgba(20,23,28,.07)';ctx.fillText(t,0,0);ctx.restore()}
     else if(l.k==='ingang'){const tt=l.t.replace(/^Entrance\s*/i,'Ingang ');ctx.font="600 17px 'League Spartan',sans-serif";const w=ctx.measureText(tt).width+52;rondeRechthoek(ctx,l.x-w/2,l.y-17,w,34,17);ctx.fillStyle='#14171c';ctx.fill();ctx.fillStyle='#fff';ctx.fillText(tt,l.x+8,l.y+2);ctx.beginPath();ctx.moveTo(l.x-w/2+16,l.y+6);ctx.lineTo(l.x-w/2+23,l.y-6);ctx.lineTo(l.x-w/2+30,l.y+6);ctx.closePath();ctx.fill()}
-    else{const lang=/mainstreet/i.test(l.t);ctx.save();ctx.translate(l.x,l.y);if(lang)ctx.rotate(-Math.PI/2);ctx.font=`600 ${lang?17:19}px 'League Spartan',sans-serif`;ctx.fillStyle=lang?'#e59c90':'#b9a9a4';ctx.fillText(t,0,0);ctx.restore()}}
+    else{const lang=/mainstreet/i.test(l.t);ctx.save();ctx.translate(l.x,l.y);if(lang)ctx.rotate(-Math.PI/2);ctx.font=`600 ${lang?17:19}px 'League Spartan',sans-serif`;ctx.fillStyle=lang?'#e59c90':'#b9a9a4';ctx.fillText(t,0,0);ctx.restore()}ctx.restore()}
   // onze standen
   const dicht=r.width/view.k<820;const klein=13*view.k<6.5;
   // Twee beurten: eerst alle vullingen, dan alle randen. Anders bedekt de vulling van een later
@@ -900,33 +969,39 @@ function tekenNu(){
   // nummer in het midden. Bezocht: alleen het vinkje. Buiten het filter: geen logo, grijs nummer.
   const NR=13,MIN=8;const items=[];let px=NR;
   for(const i of zichtbaar){const s0=PLAN.standen[i];const ss=s0.slugs.map(x=>perSlug[x]).filter(Boolean);if(!ss.length)continue;const gedaan=ss.filter(x=>statusVan(x.slug).bezocht).length;
-    const label=s0.zone?`${gedaan}/${ss.length}`:String(ss[0].stand).split('|')[0].trim();const marge=s0.b.h<40?3:6;items.push({s0,ss,label,marge});
-    if(s0._k!=='s klaar'){ctx.font="700 13px 'League Spartan',sans-serif";const past=Math.floor(NR*(s0.b.w-2*marge)/Math.max(1,ctx.measureText(label).width));if(past<px)px=Math.max(MIN,past)}}
-  for(const it of items){const {s0,ss,label,marge}=it;const b=s0.b;const kl=s0._k;const klaar=kl==='s klaar';const buiten=kl==='s buiten';const eerste=ss[0];
-    if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',s0.cx,s0.cy+1);continue}
+    const label=s0.zone?`${gedaan}/${ss.length}`:s0.nr||String(ss[0].stand).split('|')[0].trim();const vb=schermVak(s0.ib);const marge=vb.h<40?3:6;items.push({s0,ss,label,marge,vb});
+    if(s0._k!=='s klaar'){ctx.font="700 13px 'League Spartan',sans-serif";const past=Math.floor(NR*(vb.w-2*marge)/Math.max(1,ctx.measureText(label).width));if(past<px)px=Math.max(MIN,past)}}
+  for(const it of items){const {s0,ss,label,marge,vb}=it;const b=vb;const kl=s0._k;const klaar=kl==='s klaar';const buiten=kl==='s buiten';const eerste=ss[0];
+    ctx.save();if(planRot){ctx.translate(b.cx,b.cy);ctx.rotate(-Math.PI/2);ctx.translate(-b.cx,-b.cy)}
+    if(klaar){ctx.font="700 24px 'League Spartan',sans-serif";ctx.fillStyle='#fff';ctx.fillText('✓',b.cx,b.cy+1);ctx.restore();continue}
     const band=px+2*marge;const ruimteH=b.h-band-marge;let metLogo=false;
-    if(!s0.zone&&!buiten&&eerste.logo&&ruimteH>=10&&b.w-2*marge>=10){const im=logoVan(eerste.logo);if(im){const m=Math.min(b.w-2*marge,ruimteH,64);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,s0.cx-w/2,b.y0+marge+(ruimteH-h)/2,w,h);metLogo=true}}
-    if(!klein){ctx.font=`${buiten?500:700} ${px}px 'League Spartan',sans-serif`;ctx.fillStyle=buiten?'#a9a8a2':'#14171c';ctx.fillText(label,s0.cx,metLogo?b.y1-marge-px/2+1:s0.cy+1)}
-    if(!klaar&&!buiten&&ss.some(x=>x.prio==='A')){ctx.beginPath();ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}}
-  let af=0,tot=0;for(const x of STANDEN){if(prioFilter&&x.prio!==prioFilter)continue;tot++;if(statusVan(x.slug).bezocht)af++}
-  $('#planteller').textContent=`Team ${af}/${tot}${prioFilter?' · prio '+prioFilter:''}`;
+    if(!s0.zone&&!buiten&&eerste.logo&&ruimteH>=10&&b.w-2*marge>=10){const im=logoVan(eerste.logo);if(im){const m=Math.min(b.w-2*marge,ruimteH,64);const verh=im.naturalWidth/im.naturalHeight;let w=m,h=m;if(verh>1)h=m/verh;else w=m*verh;ctx.drawImage(im,b.cx-w/2,b.y0+marge+(ruimteH-h)/2,w,h);metLogo=true}}
+    if(!klein){ctx.font=`${buiten?500:700} ${px}px 'League Spartan',sans-serif`;ctx.fillStyle=buiten?'#a9a8a2':'#14171c';ctx.fillText(label,b.cx,metLogo?b.y1-marge-px/2+1:b.cy+1)}
+    if(!klaar&&!buiten&&ss.some(x=>x.prio==='A')){ctx.beginPath();if(s0.vorm==='ruit'){const hb=planRot?s0.b.w:s0.b.h;ctx.arc(b.cx,b.cy-hb/2+hb*.17,3.5,0,Math.PI*2)}else if(Math.min(b.w,b.h)<px*2+16)ctx.arc(b.x1+6,b.cy,3.5,0,Math.PI*2);else ctx.arc(b.x1-7,b.y0+7,3.5,0,Math.PI*2);ctx.fillStyle='#fa8072';ctx.fill()}
+    ctx.restore()}
+  ctx.restore(); // einde van de halknip
+  let af=0,tot=0;for(const x of STANDEN){if(prioFilter&&x.prio!==prioFilter)continue;if(halFilter&&x.hal!==halFilter)continue;tot++;if(statusVan(x.slug).bezocht)af++}
+  $('#planteller').textContent=`Team ${af}/${tot}${halFilter?' · hal '+halFilter:''}${prioFilter?' · prio '+prioFilter:''}`;
 }
 function zetLegende(){$('#legende').innerHTML=`<span><i class="l open"></i>open</span><span><i class="l bezig"></i>bezig</span><span><i class="l begonnen"></i>begonnen</span><span><i class="l deels"></i>deels</span><span><i class="l klaar"></i>bezocht</span><span><i class="l pa"></i>prio A</span>`}
-function pasIn(x0,y0,x1,y1,marge){const r=$('#planvlak').getBoundingClientRect();const w=(x1-x0)+marge*2,h=(y1-y0)+marge*2;const k=Math.min(r.width/w,r.height/h);view={k,x:(x0+x1)/2-r.width/k/2,y:(y0+y1)/2-r.height/k/2};tekenPlan()}
+// Draaien alleen als er een hal met omtrek gekozen is, die hal breder is dan hoog, en het scherm staat.
+function kiesRot(){const r=$('#planvlak').getBoundingClientRect();const h=halFilter&&PLAN.hallen&&PLAN.hallen[halFilter];planRot=!!(h&&(h[2]-h[0])>(h[3]-h[1])*1.15&&r.height>r.width*1.15)}
+function pasOverzicht(){planInit();kiesRot();const h=halFilter&&PLAN.hallen&&PLAN.hallen[halFilter];if(h){pasIn(h[0],h[1],h[2],h[3],2);return}const z=halFilter?zoneVan(x=>perSlug[x]&&perSlug[x].hal===halFilter):null;if(z){pasIn(z[0],z[1],z[2],z[3],20);return}const i=PLAN.inhoud;pasIn(i.x0,i.y0,i.x1,i.y1,6)}
+function pasIn(x0,y0,x1,y1,marge){kiesRot();if(planRot){[x0,y0,x1,y1]=[PLAN.h-y1,x0,PLAN.h-y0,x1]}const r=$('#planvlak').getBoundingClientRect();const w=(x1-x0)+marge*2,h=(y1-y0)+marge*2;const k=Math.min(r.width/w,r.height/h);view={k,x:(x0+x1)/2-r.width/k/2,y:(y0+y1)/2-r.height/k/2};tekenPlan()}
 function zoneVan(filter){planInit();let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;PLAN.standen.forEach(st=>{if(!st.slugs.some(filter))return;x0=Math.min(x0,st.b.x0);y0=Math.min(y0,st.b.y0);x1=Math.max(x1,st.b.x1);y1=Math.max(y1,st.b.y1)});return x0<1e9?[x0,y0,x1,y1]:null}
 // nuSlug: de stand die als 'nu' oplicht. focus: alleen op die stand inzoomen, bijvoorbeeld net na Opslaan.
 function openPlan(nuSlug,focus){
   if(!PLAN){toast('Geen grondplan beschikbaar');return}
   if($('#cNaam')&&huidig){leesVelden();putVisit(opname).catch(()=>{})}
   planNu=nuSlug||null;planGekozen=-1;$('#plan').classList.add('actief');$('#planblad').classList.remove('actief');zetLegende();planInit();haalTeam();
-  requestAnimationFrame(()=>{const doel=focus||nuSlug;const z=doel?zoneVan(x=>x===doel):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else pasIn(0,0,PLAN.w,PLAN.h,20);if(!planKlaar){koppelPlan();planKlaar=true}});
+  requestAnimationFrame(()=>{const doel=focus||nuSlug;const ds=doel&&perSlug[doel];if(ds&&HALLEN.length&&halFilter&&ds.hal!==halFilter)zetHal(ds.hal||'',true);const z=doel?zoneVan(x=>x===doel):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else pasOverzicht();if(!planKlaar){koppelPlan();planKlaar=true}});
 }
 function sluitPlan(){$('#plan').classList.remove('actief')}
 function infoKaart(x){const v=visits[x.slug];const st=statusVan(x.slug);const klaar=st.bezocht;
   const tm=(team[x.slug]||[]).find(t=>t&&t.bezocht&&t.contact_naam);const naam=v&&v.contact_naam?v.contact_naam+(v.contact_functie?' ('+v.contact_functie+')':''):tm?tm.contact_naam:'';
   const status=klaar?'✓ bezocht door '+st.door.join(', '):st.bezig?'bezig · '+st.doorBezig.join(', '):st.begonnen?'begonnen · '+st.doorBegonnen.join(', '):'open';
   return `<div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(x.stand)}</span> ${x.prio?'<span class="badge">prio '+esc(x.prio)+'</span>':''}<h2>${esc(x.naam)}</h2></div>${x.logo?'<div class="logo"><img src="'+esc(x.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div>
-    <div class="meta">${esc(kortBeurs(x.beurs))}${x.gemeente?' · '+esc(x.gemeente):''}${x.categorie?' · '+esc(x.categorie):''}</div>
+    <div class="meta">${esc(kortBeurs(x.beurs))}${x.gemeente?' · '+esc(x.gemeente):''}${x.categorie?' · '+esc(kortCat(x.categorie)):''}</div>
     ${x.wat_ze_doen?'<div class="doen">'+esc(x.wat_ze_doen)+'</div>':''}
     ${naam?'<div class="doen"><b>Gesproken met:</b> '+esc(naam)+'</div>':''}
     <span class="status ${klaar?'ok':''}">${esc(status)}${x.spoor?' · '+esc(x.spoor):''}</span>
@@ -953,7 +1028,7 @@ function koppelPlan(){
   vlak.addEventListener('pointermove',e=>{if(!pt.has(e.pointerId))return;const vorig=pt.get(e.pointerId);pt.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pt.size===1){const dx=e.clientX-vorig.x,dy=e.clientY-vorig.y;bewogen+=Math.abs(dx)+Math.abs(dy);view.x-=dx/view.k;view.y-=dy/view.k;tekenPlan()}
     else if(pt.size===2&&knijp){const a=[...pt.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(d>0){const r=vlak.getBoundingClientRect();zoomOp(d/knijp,(a[0].x+a[1].x)/2-r.left,(a[0].y+a[1].y)/2-r.top);knijp=d;bewogen+=10}}});
-  const raak=(cx,cy)=>{const r=vlak.getBoundingClientRect();const x=view.x+(cx-r.left)/view.k,y=view.y+(cy-r.top)/view.k;
+  const raak=(cx,cy)=>{const r=vlak.getBoundingClientRect();const [x,y]=naarPlan(view.x+(cx-r.left)/view.k,view.y+(cy-r.top)/view.k);
     for(let i=PLAN.standen.length-1;i>=0;i--){const s0=PLAN.standen[i];const b=s0.b;if(x<b.x0||x>b.x1||y<b.y0||y>b.y1)continue;const p=s0.pts;let binnen=false;for(let a=0,c=p.length-1;a<p.length;c=a++){if((p[a][1]>y)!==(p[c][1]>y)&&x<(p[c][0]-p[a][0])*(y-p[a][1])/(p[c][1]-p[a][1])+p[a][0])binnen=!binnen}if(binnen)return i}return -1};
   const los=e=>{if(!pt.has(e.pointerId))return;pt.delete(e.pointerId);if(pt.size<2)knijp=null;
     if(pt.size===0){planGebaar=false;const tik=start&&bewogen<10;if(tik){const i=raak(e.clientX,e.clientY);if(i>=0)toonBlad(PLAN.standen[i],i);else{$('#planblad').classList.remove('actief');planGekozen=-1}}start=null;tekenPlan()}};
@@ -969,9 +1044,9 @@ $('#btnPitchStand').onclick=openPitch;
 $('#btnPitchDicht').onclick=()=>$('#pitch').classList.remove('actief');
 $('#btnZoomIn').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(0.7,r.left+r.width/2,r.top+r.height/2)};
 $('#btnZoomUit').onclick=()=>{const r=$('#planvlak').getBoundingClientRect();planZoom(1.4,r.left+r.width/2,r.top+r.height/2)};
-$('#btnPlanAlles').onclick=()=>pasIn(0,0,PLAN.w,PLAN.h,20);
+$('#btnPlanAlles').onclick=()=>pasOverzicht();
 // Laatste: de stand die je zelf het laatst opsloeg, zodat je ziet wat daar rond nog open is.
-$('#btnPlanMijn').onclick=()=>{let l=null;for(const v of Object.values(visits)){if(v.bezoeker===wie&&v.bezocht&&v.opgeslagen_om&&(!l||v.opgeslagen_om>l.opgeslagen_om))l=v}const z=l?zoneVan(x=>x===l.slug):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else{toast('Nog niets opgeslagen');pasIn(0,0,PLAN.w,PLAN.h,20)}};
+$('#btnPlanMijn').onclick=()=>{let l=null;for(const v of Object.values(visits)){if(v.bezoeker===wie&&v.bezocht&&v.opgeslagen_om&&(!l||v.opgeslagen_om>l.opgeslagen_om))l=v}const z=l?zoneVan(x=>x===l.slug):null;if(z)pasIn(z[0],z[1],z[2],z[3],180);else{toast('Nog niets opgeslagen');pasOverzicht()}};
 
 // ── versturen ─────────────────────────────────────────────────────────
 $('#btnExport').onclick=async()=>{
@@ -987,18 +1062,18 @@ $('#btnExport').onclick=async()=>{
   const mediaMeta=[];
   // Zelfde map en zelfde bestandsnaam als in de back-uprepo: <bezoeker>/<slug>/<soort>-<tijdstip>.<ext>.
   // Komt iets langs beide wegen binnen, dan valt het op dezelfde plek en is het één bestand.
-  for(const m of ms){if(!slugs.has(m.slug))continue;const naam=`${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;bestanden[naam]=new Uint8Array(await m.blob.arrayBuffer());mediaMeta.push({bestand:naam,slug:m.slug,soort:m.soort,mime:m.mime,duur_s:m.duur_s,created:m.created,in_backup:!!m.sync})}
-  for(const v of vs){const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;bestanden[`${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at||v.opgeslagen_om||'concept')}.json`]=fflate.strToU8(JSON.stringify(kopie,null,1))}
+  for(const m of ms){if(!slugs.has(m.slug))continue;const naam=`${window.BP||''}${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;bestanden[naam]=new Uint8Array(await m.blob.arrayBuffer());mediaMeta.push({bestand:naam,slug:m.slug,soort:m.soort,mime:m.mime,duur_s:m.duur_s,created:m.created,in_backup:!!m.sync})}
+  for(const v of vs){const st=perSlug[v.slug]||{};const kopie=Object.assign({},v,{naam:st.naam,stand:st.stand,beurs:st.beurs});delete kopie.sync_at;bestanden[`${window.BP||''}${veilig(wie)}/${veilig(v.slug)}/visit-${veilig(v.updated_at||v.opgeslagen_om||'concept')}.json`]=fflate.strToU8(JSON.stringify(kopie,null,1))}
   const json={bezoeker:wie,beurs:BEURS_INFO.titel,geexporteerd:new Date().toISOString(),visits:vs.map(v=>Object.assign({},v,{naam:(perSlug[v.slug]||{}).naam,stand:(perSlug[v.slug]||{}).stand})),media:mediaMeta};
   bestanden['overzicht-'+veilig(wie)+'.json']=fflate.strToU8(JSON.stringify(json,null,1));
   const zip=fflate.zipSync(bestanden,{level:0});
   const d=new Date();const stamp=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
   const file=new File([zip],`beurs-${wie.toLowerCase()}-${stamp}.zip`,{type:'application/zip'});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({files:[file],title:'Beursbezoeken '+wie});ls('laatst_verstuurd',new Date().toISOString());toonVeilig();toast('Verstuurd');return}catch(e){if(e.name==='AbortError')return}
+    try{await navigator.share({files:[file],title:'Beursbezoeken '+wie});lsB('laatst_verstuurd',new Date().toISOString());toonVeilig();toast('Verstuurd');return}catch(e){if(e.name==='AbortError')return}
   }
   const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);
-  ls('laatst_verstuurd',new Date().toISOString());toonVeilig();
+  lsB('laatst_verstuurd',new Date().toISOString());toonVeilig();
   toast('Zip gedownload: stuur hem door naar Lorenzo');
 };
 

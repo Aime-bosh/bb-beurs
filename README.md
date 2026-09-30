@@ -15,9 +15,11 @@ Eén `index.html` zonder build-stap, geen server en geen database. De app draait
 | Bestand | Rol |
 |---|---|
 | `index.html` | de hele app |
-| `data.js`, `plan.js` | standenlijst en grondplan, gegenereerd uit de publieke gegevens van de beurs; niet met de hand bewerken |
+| `beurzen.js` | de beurzen die de app kent; de keuze bovenaan de lijst wisselt ertussen |
+| `data.js`, `plan.js` | standenlijst en grondplan van Empack Gent 2026, de eerste beurs |
+| `beurzen/<beurs>/` | `data.js`, `plan.js` en `logos/` van elke volgende beurs, gegenereerd uit de publieke gegevens van die beurs; niet met de hand bewerken |
 | `sw.js`, `manifest.json`, iconen | zodat de pagina zonder netwerk opent en zich als app gedraagt; verhoog het versienummer in `sw.js` bij elke wijziging |
-| `logos/` | logo's van de standhouders, verkleind |
+| `logos/` | logo's van de standhouders van Empack, verkleind |
 | `jsqr.min.js`, `fflate.min.js`, `league-spartan.woff2` | materiaal van derden |
 
 ## Licentie en materiaal van derden
