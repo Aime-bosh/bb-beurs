@@ -195,6 +195,24 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 #planblad .rij .tegel{width:50px;height:50px}
 .pil.plan{border-color:var(--zalm-d);color:var(--zalm-d);font-weight:600}
 .standkop .naarplan{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;padding:7px 14px 4px;font-size:14px;font-weight:600;margin-top:14px}
+.standkop .knoprij{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.standkop .knoprij .naarplan{margin-top:0}
+.standkop .naarplan.tips{background:var(--zalm);border-color:var(--zalm)}
+.standkop .site{display:inline-block;margin-top:10px;color:#e9e9e9;font-size:15px;text-decoration:underline;text-underline-offset:3px;word-break:break-all}
+/* Drie dingen om mee te beginnen: de koraalpagina van de gratis websitecheck, om aan de stand te tonen. */
+.tipsvenster{position:fixed;inset:0;z-index:35;background:var(--zalm);color:#fff;overflow:auto;padding:calc(16px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));display:none}
+.tipsvenster.open{display:block}
+.tipsvenster .binnen{max-width:980px;margin:0 auto;position:relative}
+.tipsvenster .kruis{position:absolute;top:0;right:-6px;width:48px;height:48px;border-radius:50%;border:1.5px solid #fff;background:transparent;color:#fff;font-size:26px;line-height:1;display:grid;place-items:center;padding-top:3px}
+.tipsvenster .wie{text-transform:uppercase;letter-spacing:.08em;font-size:13px;font-weight:600;padding:14px 60px 0 0}
+.tipsvenster h2{font-size:36px;line-height:1.04;margin:14px 0 0;font-weight:700}
+.tipsvenster ol{list-style:none;padding:0;margin:28px 0 0;display:grid;gap:26px}
+@media (min-width:768px){.tipsvenster ol{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px}.tipsvenster h2{font-size:48px;text-align:right;padding-right:60px}}
+.tipsvenster h3{font-size:21px;margin:0 0 8px;line-height:1.15;font-weight:700}
+.tipsvenster p{margin:0;font-size:17px;line-height:1.45}
+.tipsvenster .bron{display:inline-block;margin-top:8px;font-size:13px;color:#fff;opacity:.9;word-break:break-all}
+.tipsvenster .slot{border-top:1px solid rgba(255,255,255,.7);margin-top:30px;padding-top:16px;font-size:15px}
+.tipsvenster .dicht{display:block;width:100%;max-width:360px;margin:24px 0 0;min-height:54px;border-radius:999px;border:1.5px solid #fff;background:transparent;color:#fff;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding-top:4px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:var(--inkt);color:#fff;padding:12px 20px 9px;border-radius:999px;font-size:15px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.zichtbaar{opacity:1}
 .kies{position:fixed;inset:0;z-index:40;background:var(--wit);overflow:auto;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}
@@ -282,6 +300,7 @@ textarea.veld{min-height:104px;resize:vertical;border-radius:var(--r);padding-to
 </div>
 
 <div id="toast" class="toast"></div>
+<div id="tipsvenster" class="tipsvenster" role="dialog" aria-modal="true" aria-labelledby="tipstitel"></div>
 
 <script src="jsqr.min.js"></script>
 <script src="fflate.min.js"></script>
@@ -304,7 +323,7 @@ const STANDEN=(window.STANDEN||[]).slice().sort((a,b)=>standSort(a.stand)-standS
 if(window.BEURS&&!BEURS.oud)STANDEN.forEach(s=>{if(s.logo&&!/^(https?:)?\/\//.test(s.logo))s.logo=BEURS.map+'/'+s.logo});
 // Prioriteit en vooraf-contact staan niet in de publieke data. Ze komen uit de private repo, met de back-upsleutel,
 // en worden op het toestel bewaard zodat ze ook zonder netwerk zichtbaar blijven.
-function pasPriveToe(){let p={};try{p=JSON.parse(lsB('prive')||'{}')||{}}catch(e){}for(const s of STANDEN){const x=p[s.slug]||{};s.prio=x.prio||'';s.spoor=x.spoor||'';s.haak=x.haak||'';if(x.beslisser){s.beslisser=x.beslisser;s.functie=x.functie||''}}}
+function pasPriveToe(){let p={};try{p=JSON.parse(lsB('prive')||'{}')||{}}catch(e){}for(const s of STANDEN){const x=p[s.slug]||{};s.prio=x.prio||'';s.spoor=x.spoor||'';s.haak=x.haak||'';s.tips=Array.isArray(x.tips)&&x.tips.length?x.tips:null;s.tips_gelezen=x.tips_gelezen||'';s.tips_let_op=x.tips_let_op||'';if(x.beslisser){s.beslisser=x.beslisser;s.functie=x.functie||''}}}
 pasPriveToe(); // meteen bij het laden, vóór de lijst getekend wordt
 async function haalPrive(){
   // Alleen bij het testen op de eigen Mac (localhost), zonder sleutel: een lokale kopie van de privélaag.
@@ -521,6 +540,21 @@ function kortCat(c){const d=String(c).split(' · ');return d.length>3?d.slice(0,
 function kortBeurs(b){return /abiss/i.test(b)?'Abiss':/empack/i.test(b)?'Empack':/transport/i.test(b)?'Transport & Logistics':/bilt/i.test(b)?'Bilt':/bedrijvencontact/i.test(b)?'BCD Brugge':b}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
+// Drie dingen om mee te beginnen: uit de privélaag (onze lezing van hun site, nooit in de publieke data).
+// Volledig scherm, zodat het toestel naar de standhouder kan; sluiten brengt je terug naar de fiche.
+function toonTips(s){const w=$('#tipsvenster');if(!s.tips)return;
+  const dag=s.tips_gelezen?new Date(s.tips_gelezen+'T12:00:00').toLocaleDateString('nl-BE',{day:'numeric',month:'long',year:'numeric'}):'';
+  w.innerHTML=`<div class="binnen"><button class="kruis" id="tipsKruis" aria-label="Sluiten">×</button>
+    <div class="wie">${esc(s.naam)}${dag?' · uw website gelezen op '+esc(dag):''}</div>
+    <h2 id="tipstitel">Drie dingen om mee te beginnen</h2>
+    <ol>${s.tips.map((t,i)=>`<li><h3>${i+1} · ${esc(t.titel)}</h3><p>${esc(t.tekst)}</p>${/^https?:\/\//.test(t.url||'')?'<a class="bron" href="'+esc(t.url)+'" target="_blank" rel="noopener">'+esc(t.url.replace(/^https?:\/\/(www\.)?/,''))+'</a>':''}</li>`).join('')}</ol>
+    <div class="slot"><b>Wilt u weten wat u het verst brengt?</b> Graag overlopen we dit in 30 minuten met u, bij u of online.</div>
+    <button class="dicht" id="tipsDicht">Sluiten</button></div>`;
+  const dicht=()=>{w.classList.remove('open');w.innerHTML='';document.removeEventListener('keydown',esc_);document.body.style.overflow=''};
+  const esc_=e=>{if(e.key==='Escape')dicht()};
+  $('#tipsKruis').onclick=dicht;$('#tipsDicht').onclick=dicht;document.addEventListener('keydown',esc_);
+  document.body.style.overflow='hidden';w.scrollTop=0;w.classList.add('open')}
+
 // ── stand ─────────────────────────────────────────────────────────────
 async function openStand(s){
   if(recorder){toast('Stop eerst de opname');return}
@@ -546,10 +580,13 @@ function renderStand(){
   <div class="standkop"><div class="top"><div><span class="nr">Stand ${esc(s.stand)}</span> ${s.prio?'<span class="badge">prio '+esc(s.prio)+'</span>':''}
     <h2>${esc(s.naam)}</h2></div>${s.logo?'<div class="logo"><img src="'+esc(s.logo)+'" alt="" onerror="this.parentNode.remove()"></div>':''}</div><div class="meta">${esc(s.beurs)}${s.gemeente?' · '+esc(s.gemeente):''}${s.categorie?' · '+esc(kortCat(s.categorie)):''}</div>
     ${s.wat_ze_doen?'<div class="doen">'+esc(s.wat_ze_doen)+'</div>':''}
+    ${/^https?:\/\//.test(s.website||'')?'<a class="site" href="'+esc(s.website)+'" target="_blank" rel="noopener">'+esc(s.website.replace(/^https?:\/\/(www\.)?/,'').replace(/\/$/,''))+'</a>':''}
     ${s.haak?'<div class="doen"><b>Haak:</b> '+esc(s.haak)+'</div>':''}
     ${s.beslisser?'<div class="doen"><b>Vraag naar:</b> '+esc(s.beslisser)+(s.functie?' ('+esc(s.functie)+')':'')+'</div>':''}
     ${s.spoor?'<div class="meta">Vooraf: '+esc(s.spoor)+'</div>':''}
-    ${(window.PLAN&&PLAN.bron[s.slug])?'<button class="naarplan" id="btnToonPlan">Toon op grondplan'+(PLAN.bron[s.slug]==='zone'?' (zone)':'')+'</button>':'<div class="meta" style="margin-top:12px">Deze stand staat niet op het grondplan.</div>'}
+    <div class="knoprij">${(window.PLAN&&PLAN.bron[s.slug])?'<button class="naarplan" id="btnToonPlan">Toon op grondplan'+(PLAN.bron[s.slug]==='zone'?' (zone)':'')+'</button>':''}${s.tips?'<button class="naarplan tips" id="btnTips">3 tips voor hun site</button>':''}</div>
+    ${s.tips&&s.tips_let_op?'<div class="meta" style="margin-top:10px;color:var(--zalm);text-transform:none;letter-spacing:0">Let op: '+esc(s.tips_let_op)+'</div>':''}
+    ${(window.PLAN&&PLAN.bron[s.slug])?'':'<div class="meta" style="margin-top:12px">Deze stand staat niet op het grondplan.</div>'}
   </div>
   <div class="blok"><h2>Opname</h2>
     <div class="keuze3" id="opnamekeuze">
@@ -597,6 +634,7 @@ function renderStand(){
   el.querySelectorAll('#interesse .pil').forEach(b=>b.onclick=()=>{v.interesse=b.dataset.i;el.querySelectorAll('#interesse .pil').forEach(p=>p.classList.remove('aan'));b.classList.add('aan');bewaarConcept()});
   el.oninput=bewaarConcept;
   const tp=$('#btnToonPlan');if(tp)tp.onclick=()=>openPlan(s.slug);
+  const bt=$('#btnTips');if(bt)bt.onclick=()=>toonTips(s);
   $('#btnGesprek').onclick=()=>toggleRec('gesprek',$('#btnGesprek'));
   $('#btnVoice').onclick=()=>toggleRec('voicenote',$('#btnVoice'));
 
