@@ -331,9 +331,10 @@ async function haalPrive(){
   if(!ghToken()&&location.hostname==='localhost'){try{const a=await fetch(`${(window.BEURS&&BEURS.map)||'.'}/_lokaal-prive.json`,{cache:'no-store'});if(a.ok){const tekst=await a.text();JSON.parse(tekst);if(tekst!==lsB('prive')){lsB('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}}}catch(e){}return}
   if(!ghToken()||!navigator.onLine)return;
   try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${window.BP||''}_app/standen-prive.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
+    window._prv=a.status+' om '+new Date().toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
     if(a.status!==200)return;const tekst=await a.text();JSON.parse(tekst);
     if(tekst!==lsB('prive')){lsB('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}
-  }catch(e){}
+  }catch(e){window._prv='fout: '+(e&&e.message||e)}
 }
 // De pitch staat ook in de private repo, zodat hij niet publiek is en kan wijzigen zonder nieuwe appversie.
 // Hij wordt op het toestel bewaard; zonder netwerk toont de app de laatst opgehaalde tekst.
@@ -354,7 +355,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-10-28 v31';
+const APP_BUILD='2026-10-28 v32';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -1134,7 +1135,7 @@ $('#btnMeer').onclick=async()=>{
     if(confirm(`Alles wissen op dit toestel? ${n} bezoeken en alle opnames. Alleen doen als je zip bij Lorenzo is.`)&&confirm('Zeker? Dit kan niet ongedaan gemaakt worden.')){
       await tx('visits','readwrite',s=>s.clear());await tx('media','readwrite',s=>s.clear());await herlaadVisits();huidig=null;$('#stand').classList.remove('actief');$('#lijst').classList.add('actief');renderLijst();toast('Gewist')}
     return}
-  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();let tg=0;for(const s of STANDEN)if(statusVan(s.slug).bezocht)tg++;alert(`Build ${APP_BUILD}\nOpname-extra's: meter ${schakel('meter')?'aan':'uit'}, mic ${schakel('mic')?'aan':'uit'}, hervat ${schakel('hervat')?'aan':'uit'}\nGegevens ${window.APP_VERSIE||'?'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen, team ${tg} bezocht\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
+  if(k.trim().toLowerCase()==='info'){const n=(await allVisits()).length;const m=(await allMedia()).length;const q=await wachtrij();let tg=0;for(const s of STANDEN)if(statusVan(s.slug).bezocht)tg++;alert(`Build ${APP_BUILD}\nOpname-extra's: meter ${schakel('meter')?'aan':'uit'}, mic ${schakel('mic')?'aan':'uit'}, hervat ${schakel('hervat')?'aan':'uit'}\nGegevens ${window.APP_VERSIE||'?'}\nPrivélaag: ${(()=>{try{return Object.keys(JSON.parse(lsB('prive')||'{}')).length}catch(e){return '?'}})()} standen, ${STANDEN.filter(s=>s.tips).length} met tips, ophaling ${window._prv||'nog niet geprobeerd'}\nBack-up: ${ghToken()?'gekoppeld, '+(q.vs.length+q.ms.length)+' in de rij'+(syncStatus.fout?' ('+syncStatus.fout+')':''):'niet gekoppeld'}\n${STANDEN.length} standen, team ${tg} bezocht\n${n} bezoeken, ${m} bestanden op dit toestel\nBeginscherm: ${standalone()?'ja':'nee'}`)}
 };
 
 start().catch(e=>{document.body.innerHTML='<div class="leeg">De app kon niet starten: '+esc(e.message)+'</div>'});
