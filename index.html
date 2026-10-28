@@ -332,6 +332,9 @@ async function haalPrive(){
   if(!ghToken()||!navigator.onLine)return;
   try{const a=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${window.BP||''}_app/standen-prive.json`,{headers:{Authorization:'Bearer '+ghToken(),Accept:'application/vnd.github.raw+json'},cache:'no-store'});
     window._prv=a.status+' om '+new Date().toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+    // Een geweigerde sleutel valt anders pas op als er iets te versturen is: dan staat er tot die tijd "veilig".
+    if(a.status===401||a.status===403){window._sleutelGeweigerd=syncStatus.fout='sleutel geweigerd door GitHub ('+a.status+'), koppel een nieuwe';toonVeilig();return}
+    window._sleutelGeweigerd='';if(/^sleutel geweigerd/.test(syncStatus.fout||'')){syncStatus.fout='';toonVeilig()}
     if(a.status!==200)return;const tekst=await a.text();JSON.parse(tekst);
     if(tekst!==lsB('prive')){lsB('prive',tekst);pasPriveToe();renderLijst();tekenPlan()}
   }catch(e){window._prv='fout: '+(e&&e.message||e)}
@@ -355,7 +358,7 @@ function renderPitch(){
 }
 function openPitch(){try{renderPitch()}catch(e){}$('#pitch').classList.add('actief');haalPitch()}
 const BEURS_INFO=window.BEURS_INFO||{titel:'Beurs',datum:''};
-const APP_BUILD='2026-10-28 v32';
+const APP_BUILD='2026-10-28 v33';
 
 // ── team: wat collega's bezochten, teruggelezen uit de back-uprepo ──────────────
 // Sinds dag 2 kiest iedereen vrij een stand. Elk toestel leest daarom het nieuwste
@@ -862,7 +865,7 @@ async function wachtrij(){
 }
 async function synchroniseer(){
   if(syncBezig||!ghToken()||!wie)return null;if(!navigator.onLine){const q=await wachtrij();syncStatus.wacht=q.vs.length+q.ms.length;syncStatus.fout='geen netwerk';toonVeilig();return null}
-  syncBezig=true;let gelukt=0;syncStatus.fout='';
+  syncBezig=true;let gelukt=0;syncStatus.fout=window._sleutelGeweigerd||'';
   try{
     const{vs,ms}=await telRij();
     for(const m of ms){const st=perSlug[m.slug]||{};const pad=`${window.BP||''}${veilig(wie)}/${veilig(m.slug)}/${veilig(m.soort)}-${veilig(m.created)}.${extVan(m.mime)}`;
